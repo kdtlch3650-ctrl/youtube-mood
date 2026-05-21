@@ -1,20 +1,56 @@
 import { useState } from 'react'
 import './App.css'
 
-const sampleTags = ['calm', 'warm', 'late-night']
+type AnalyzeResult = {
+  input_text: string
+  emotions: string[]
+  mood_tags: string[]
+  search_keywords: string[]
+}
 
 function App() {
   const [inputText, setInputText] = useState('')
-  const [submittedText, setSubmittedText] = useState('')
-  const isResultView = Boolean(submittedText)
+  const [analysisResult, setAnalysisResult] = useState<AnalyzeResult | null>(null)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const isResultView = Boolean(analysisResult)
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setSubmittedText(inputText.trim())
+
+    const trimmedText = inputText.trim()
+    if (!trimmedText) {
+      return
+    }
+
+    setIsLoading(true)
+    setErrorMessage('')
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: trimmedText }),
+      })
+
+      if (!response.ok) {
+        throw new Error('분석 요청에 실패했습니다.')
+      }
+
+      const result: AnalyzeResult = await response.json()
+      setAnalysisResult(result)
+    } catch {
+      setErrorMessage('분석 결과를 불러오지 못했습니다. 백엔드 서버를 확인해 주세요.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleReset = () => {
-    setSubmittedText('')
+    setAnalysisResult(null)
+    setErrorMessage('')
   }
 
   return (
@@ -42,8 +78,9 @@ function App() {
                 rows={5}
               />
               <button type="submit" disabled={!inputText.trim()}>
-                음악 추천 받기
+                {isLoading ? '분석 중...' : '음악 추천 받기'}
               </button>
+              {errorMessage && <p className="error-message">{errorMessage}</p>}
             </form>
           </section>
         </>
@@ -55,19 +92,32 @@ function App() {
           <div className="result-content">
             <div>
               <p className="result-label">입력 문장</p>
-              <p className="submitted-text">{submittedText}</p>
+              <p className="submitted-text">{analysisResult?.input_text}</p>
             </div>
             <div>
-              <p className="result-label">분위기 태그 예시</p>
+              <p className="result-label">감정</p>
               <ul className="tag-list">
-                {sampleTags.map((tag) => (
+                {analysisResult?.emotions.map((emotion) => (
+                  <li key={emotion}>{emotion}</li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="result-label">분위기 태그</p>
+              <ul className="tag-list">
+                {analysisResult?.mood_tags.map((tag) => (
                   <li key={tag}>{tag}</li>
                 ))}
               </ul>
             </div>
-            <p className="placeholder-text">
-              다음 단계에서 백엔드 분석 API와 연결해 실제 감정 결과를 표시합니다.
-            </p>
+            <div>
+              <p className="result-label">검색 키워드</p>
+              <ul className="keyword-list">
+                {analysisResult?.search_keywords.map((keyword) => (
+                  <li key={keyword}>{keyword}</li>
+                ))}
+              </ul>
+            </div>
             <button type="button" className="secondary-button" onClick={handleReset}>
               다시 입력하기
             </button>

@@ -79,6 +79,12 @@
   cursor: not-allowed;
 }
 
+.error-message {
+  color: #b91c1c;
+  font-size: 14px;
+  margin: 0;
+}
+
 .secondary-button {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -113,6 +119,14 @@
   font-size: 14px;
   font-weight: 700;
   padding: 6px 10px;
+}
+
+.keyword-list {
+  color: var(--text);
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding-left: 20px;
 }
 
 .placeholder-text,

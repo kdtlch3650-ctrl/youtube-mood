@@ -23,6 +23,12 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+## VS Code에서 실행
+
+루트 폴더를 VS Code로 연 뒤 `Run and Debug`에서 `Backend: FastAPI`를 선택하면 백엔드 서버를 실행할 수 있습니다.
+
+실행 전에 `8000`번 포트를 사용하는 기존 Python 서버가 있다면 종료해야 합니다.
+
 ## 현재 API
 
 ### `GET /health`
