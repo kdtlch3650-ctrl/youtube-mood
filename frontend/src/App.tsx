@@ -8,9 +8,47 @@ type AnalyzeResult = {
   search_keywords: string[]
 }
 
+type RecommendationTab = 'track' | 'playlist'
+
+type RecommendationItem = {
+  id: string
+  title: string
+  channelTitle: string
+  reason: string
+}
+
+const recommendedTrack: RecommendationItem = {
+  id: 'track-1',
+  title: 'Soft Night Drive',
+  channelTitle: 'Mood Archive',
+  reason: '지친 기분을 가라앉히되 너무 무겁지 않은 분위기를 기준으로 고른 곡입니다.',
+}
+
+const recommendedPlaylists: RecommendationItem[] = [
+  {
+    id: 'playlist-1',
+    title: 'Calm but not sad playlist',
+    channelTitle: 'Daily Sound',
+    reason: '차분하지만 우울하게 가라앉지 않는 음악을 이어서 듣기 좋습니다.',
+  },
+  {
+    id: 'playlist-2',
+    title: 'Warm focus music',
+    channelTitle: 'Studio Room',
+    reason: '집중이 필요하면서도 편안한 분위기를 유지하고 싶을 때 어울립니다.',
+  },
+  {
+    id: 'playlist-3',
+    title: 'Late night comfort songs',
+    channelTitle: 'Playlist Garden',
+    reason: '밤에 듣기 좋은 부드러운 곡 중심으로 이어지는 플레이리스트입니다.',
+  },
+]
+
 function App() {
   const [inputText, setInputText] = useState('')
   const [analysisResult, setAnalysisResult] = useState<AnalyzeResult | null>(null)
+  const [selectedTab, setSelectedTab] = useState<RecommendationTab>('track')
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const isResultView = Boolean(analysisResult)
@@ -51,6 +89,7 @@ function App() {
   const handleReset = () => {
     setAnalysisResult(null)
     setErrorMessage('')
+    setSelectedTab('track')
   }
 
   return (
@@ -89,38 +128,79 @@ function App() {
           <p className="eyebrow">Recommendation result</p>
           <h1 id="result-title">추천 결과</h1>
 
-          <div className="result-content">
-            <div>
-              <p className="result-label">입력 문장</p>
-              <p className="submitted-text">{analysisResult?.input_text}</p>
-            </div>
-            <div>
-              <p className="result-label">감정</p>
-              <ul className="tag-list">
-                {analysisResult?.emotions.map((emotion) => (
-                  <li key={emotion}>{emotion}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="result-label">분위기 태그</p>
-              <ul className="tag-list">
-                {analysisResult?.mood_tags.map((tag) => (
-                  <li key={tag}>{tag}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="result-label">검색 키워드</p>
-              <ul className="keyword-list">
-                {analysisResult?.search_keywords.map((keyword) => (
-                  <li key={keyword}>{keyword}</li>
-                ))}
-              </ul>
-            </div>
-            <button type="button" className="secondary-button" onClick={handleReset}>
-              다시 입력하기
-            </button>
+          <div className="result-layout">
+            <aside className="result-sidebar" aria-label="분석 요약과 추천 유형 선택">
+              <div>
+                <p className="result-label">입력 문장</p>
+                <p className="submitted-text">{analysisResult?.input_text}</p>
+              </div>
+              <div>
+                <p className="result-label">감정</p>
+                <ul className="tag-list">
+                  {analysisResult?.emotions.map((emotion) => (
+                    <li key={emotion}>{emotion}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="result-label">분위기 태그</p>
+                <ul className="tag-list">
+                  {analysisResult?.mood_tags.map((tag) => (
+                    <li key={tag}>{tag}</li>
+                  ))}
+                </ul>
+              </div>
+              <nav className="recommendation-tabs" aria-label="추천 유형">
+                <button
+                  type="button"
+                  className={selectedTab === 'track' ? 'active' : ''}
+                  onClick={() => setSelectedTab('track')}
+                >
+                  한 곡 추천
+                </button>
+                <button
+                  type="button"
+                  className={selectedTab === 'playlist' ? 'active' : ''}
+                  onClick={() => setSelectedTab('playlist')}
+                >
+                  플레이리스트
+                </button>
+              </nav>
+              <button type="button" className="secondary-button" onClick={handleReset}>
+                다시 입력하기
+              </button>
+            </aside>
+
+            <section className="recommendation-panel" aria-label="추천 음악 결과">
+              {selectedTab === 'track' ? (
+                <article className="recommendation-card featured-card">
+                  <p className="card-type">한 곡 추천</p>
+                  <h2>{recommendedTrack.title}</h2>
+                  <p className="channel-name">{recommendedTrack.channelTitle}</p>
+                  <p>{recommendedTrack.reason}</p>
+                </article>
+              ) : (
+                <div className="playlist-grid">
+                  {recommendedPlaylists.map((playlist) => (
+                    <article className="recommendation-card" key={playlist.id}>
+                      <p className="card-type">플레이리스트</p>
+                      <h2>{playlist.title}</h2>
+                      <p className="channel-name">{playlist.channelTitle}</p>
+                      <p>{playlist.reason}</p>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              <div className="keyword-box">
+                <p className="result-label">검색 키워드</p>
+                <ul className="keyword-list">
+                  {analysisResult?.search_keywords.map((keyword) => (
+                    <li key={keyword}>{keyword}</li>
+                  ))}
+                </ul>
+              </div>
+            </section>
           </div>
         </section>
       )}

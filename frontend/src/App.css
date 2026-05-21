@@ -91,9 +91,26 @@
   color: var(--text);
 }
 
-.result-content {
+.result-layout {
+  align-items: start;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+}
+
+.result-sidebar,
+.recommendation-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
   display: grid;
   gap: 20px;
+  padding: 24px;
+}
+
+.result-sidebar {
+  position: sticky;
+  top: 24px;
 }
 
 .submitted-text {
@@ -119,6 +136,75 @@
   font-size: 14px;
   font-weight: 700;
   padding: 6px 10px;
+}
+
+.recommendation-tabs {
+  display: grid;
+  gap: 8px;
+}
+
+.recommendation-tabs button {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.recommendation-tabs button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.recommendation-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+}
+
+.recommendation-card h2 {
+  font-size: clamp(24px, 4vw, 44px);
+  margin: 0;
+}
+
+.recommendation-card p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.featured-card {
+  min-height: 280px;
+  place-content: end;
+}
+
+.card-type {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.channel-name {
+  font-weight: 700;
+}
+
+.playlist-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.keyword-box {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
 }
 
 .keyword-list {
@@ -150,5 +236,25 @@
   .mood-form button,
   .secondary-button {
     width: 100%;
+  }
+
+  .result-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .result-sidebar {
+    position: static;
+  }
+
+  .recommendation-tabs {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .recommendation-tabs button {
+    text-align: center;
+  }
+
+  .featured-card {
+    min-height: 220px;
   }
 }
