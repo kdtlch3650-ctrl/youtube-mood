@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+
+from app.schemas import AnalyzeRequest, AnalyzeResponse
+from app.youtube import get_mock_recommended_playlists, get_mock_recommended_track
 
 app = FastAPI(title="YouTube Mood Recommendation API")
 
@@ -13,17 +15,6 @@ app.add_middleware(
 )
 
 
-class AnalyzeRequest(BaseModel):
-    text: str = Field(min_length=1)
-
-
-class AnalyzeResponse(BaseModel):
-    input_text: str
-    emotions: list[str]
-    mood_tags: list[str]
-    search_keywords: list[str]
-
-
 def create_mock_analysis(text: str) -> AnalyzeResponse:
     return AnalyzeResponse(
         input_text=text,
@@ -34,6 +25,8 @@ def create_mock_analysis(text: str) -> AnalyzeResponse:
             "soft relaxing music",
             "not too sad comfort music",
         ],
+        recommended_track=get_mock_recommended_track(),
+        recommended_playlists=get_mock_recommended_playlists(),
     )
 
 

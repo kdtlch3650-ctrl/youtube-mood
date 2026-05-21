@@ -6,6 +6,8 @@ type AnalyzeResult = {
   emotions: string[]
   mood_tags: string[]
   search_keywords: string[]
+  recommended_track: RecommendationItem
+  recommended_playlists: RecommendationItem[]
 }
 
 type RecommendationTab = 'track' | 'playlist'
@@ -13,37 +15,11 @@ type RecommendationTab = 'track' | 'playlist'
 type RecommendationItem = {
   id: string
   title: string
-  channelTitle: string
+  channel_title: string
+  url: string
+  thumbnail_url: string
   reason: string
 }
-
-const recommendedTrack: RecommendationItem = {
-  id: 'track-1',
-  title: 'Soft Night Drive',
-  channelTitle: 'Mood Archive',
-  reason: '지친 기분을 가라앉히되 너무 무겁지 않은 분위기를 기준으로 고른 곡입니다.',
-}
-
-const recommendedPlaylists: RecommendationItem[] = [
-  {
-    id: 'playlist-1',
-    title: 'Calm but not sad playlist',
-    channelTitle: 'Daily Sound',
-    reason: '차분하지만 우울하게 가라앉지 않는 음악을 이어서 듣기 좋습니다.',
-  },
-  {
-    id: 'playlist-2',
-    title: 'Warm focus music',
-    channelTitle: 'Studio Room',
-    reason: '집중이 필요하면서도 편안한 분위기를 유지하고 싶을 때 어울립니다.',
-  },
-  {
-    id: 'playlist-3',
-    title: 'Late night comfort songs',
-    channelTitle: 'Playlist Garden',
-    reason: '밤에 듣기 좋은 부드러운 곡 중심으로 이어지는 플레이리스트입니다.',
-  },
-]
 
 function App() {
   const [inputText, setInputText] = useState('')
@@ -175,17 +151,17 @@ function App() {
               {selectedTab === 'track' ? (
                 <article className="recommendation-card featured-card">
                   <p className="card-type">한 곡 추천</p>
-                  <h2>{recommendedTrack.title}</h2>
-                  <p className="channel-name">{recommendedTrack.channelTitle}</p>
-                  <p>{recommendedTrack.reason}</p>
+                  <h2>{analysisResult?.recommended_track.title}</h2>
+                  <p className="channel-name">{analysisResult?.recommended_track.channel_title}</p>
+                  <p>{analysisResult?.recommended_track.reason}</p>
                 </article>
               ) : (
                 <div className="playlist-grid">
-                  {recommendedPlaylists.map((playlist) => (
+                  {analysisResult?.recommended_playlists.map((playlist) => (
                     <article className="recommendation-card" key={playlist.id}>
                       <p className="card-type">플레이리스트</p>
                       <h2>{playlist.title}</h2>
-                      <p className="channel-name">{playlist.channelTitle}</p>
+                      <p className="channel-name">{playlist.channel_title}</p>
                       <p>{playlist.reason}</p>
                     </article>
                   ))}

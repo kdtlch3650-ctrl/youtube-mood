@@ -12,6 +12,12 @@ FastAPI 기반 백엔드 API를 둘 폴더입니다.
 - YouTube API 요청 처리
 - 프론트엔드에 추천 결과 전달
 
+## 현재 파일 역할
+
+- `app/main.py`: FastAPI 앱과 API 경로를 관리합니다.
+- `app/schemas.py`: 요청과 응답 데이터 구조를 정의합니다.
+- `app/youtube.py`: YouTube 추천 데이터를 가져오는 역할을 담당합니다. 현재는 실제 API 호출 전 임시 데이터를 반환합니다.
+
 ## 실행 예시
 
 Python 설치 후 아래 흐름으로 실행할 예정입니다.
@@ -68,6 +74,24 @@ uvicorn app.main:app --reload
     "calm warm music playlist",
     "soft relaxing music",
     "not too sad comfort music"
+  ],
+  "recommended_track": {
+    "id": "track-1",
+    "title": "Soft Night Drive",
+    "channel_title": "Mood Archive",
+    "url": "https://www.youtube.com/",
+    "thumbnail_url": "",
+    "reason": "지친 기분을 가라앉히되 너무 무겁지 않은 분위기를 기준으로 고른 곡입니다."
+  },
+  "recommended_playlists": [
+    {
+      "id": "playlist-1",
+      "title": "Calm but not sad playlist",
+      "channel_title": "Daily Sound",
+      "url": "https://www.youtube.com/",
+      "thumbnail_url": "",
+      "reason": "차분하지만 우울하게 가라앉지 않는 음악을 이어서 듣기 좋습니다."
+    }
   ]
 }
 ```
