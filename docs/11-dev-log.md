@@ -178,3 +178,49 @@ YouTube API를 연결하기 전에 추천 결과를 어떤 형태로 보여줄�
 
 - YouTube API 키 설정 방식 추가
 - `youtube.py`의 임시 데이터를 실제 YouTube 검색 결과로 교체
+
+## 2026-05-21 YouTube API 키 설정 방식 추가
+
+### 작업 목적
+
+YouTube API 키를 코드에 직접 작성하지 않도록 환경 변수 설정 방식을 준비했다.
+
+### 작업 내용
+
+- `backend/.env.example` 파일을 추가했다.
+- `YOUTUBE_API_KEY` 환경 변수 이름을 정했다.
+- 백엔드 README에 `.env` 설정 방법을 추가했다.
+
+### 확인한 것
+
+- `.gitignore`에서 실제 `.env` 파일은 제외되고 `.env.example`만 Git에 포함될 수 있도록 되어 있다.
+
+### 남은 작업
+
+- YouTube API 키 발급
+- 백엔드에서 `.env` 값을 읽는 방식 추가
+- 실제 YouTube 검색 API 호출 구현
+
+## 2026-05-22 백엔드 환경 변수 로딩 추가
+
+### 작업 목적
+
+백엔드에서 `.env` 파일에 저장한 YouTube API 키를 읽을 수 있도록 준비했다.
+
+### 작업 내용
+
+- `python-dotenv`를 백엔드 의존성에 명시했다.
+- `app/config.py`를 추가해 `backend/.env` 파일을 읽도록 했다.
+- `YOUTUBE_API_KEY` 값을 코드에서 사용할 수 있게 했다.
+- `youtube.py`에서 API 키가 있는지 확인할 수 있는 함수를 추가했다.
+- 백엔드 README에 `config.py` 역할과 환경 변수 사용 방식을 보충했다.
+
+### 확인할 것
+
+- `.env` 파일이 없어도 백엔드 앱이 정상 import되는지 확인한다.
+- 실제 YouTube API 호출 단계에서 `YOUTUBE_API_KEY`를 사용하도록 연결한다.
+
+### 남은 작업
+
+- YouTube API 키 발급
+- 실제 YouTube 검색 API 호출 구현

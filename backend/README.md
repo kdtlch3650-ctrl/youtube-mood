@@ -15,6 +15,7 @@ FastAPI 기반 백엔드 API를 둘 폴더입니다.
 ## 현재 파일 역할
 
 - `app/main.py`: FastAPI 앱과 API 경로를 관리합니다.
+- `app/config.py`: `.env` 파일에서 환경 변수를 읽습니다.
 - `app/schemas.py`: 요청과 응답 데이터 구조를 정의합니다.
 - `app/youtube.py`: YouTube 추천 데이터를 가져오는 역할을 담당합니다. 현재는 실제 API 호출 전 임시 데이터를 반환합니다.
 
@@ -34,6 +35,20 @@ uvicorn app.main:app --reload
 루트 폴더를 VS Code로 연 뒤 `Run and Debug`에서 `Backend: FastAPI`를 선택하면 백엔드 서버를 실행할 수 있습니다.
 
 실행 전에 `8000`번 포트를 사용하는 기존 Python 서버가 있다면 종료해야 합니다.
+
+## 환경 변수 설정
+
+YouTube API 키는 코드에 직접 작성하지 않습니다.
+
+백엔드 폴더에서 `.env.example` 파일을 참고해 `.env` 파일을 만들고 값을 채웁니다.
+
+```env
+YOUTUBE_API_KEY=발급받은_YouTube_API_키
+```
+
+`.env` 파일은 Git에 올리지 않습니다.
+
+현재 백엔드는 `app/config.py`에서 `YOUTUBE_API_KEY` 값을 읽습니다. 값이 없더라도 서버는 실행되지만, 실제 YouTube API 호출 단계에서는 키가 필요합니다.
 
 ## 현재 API
 

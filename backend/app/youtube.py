@@ -1,4 +1,9 @@
+from app.config import YOUTUBE_API_KEY
 from app.schemas import RecommendationItem
+
+
+def has_youtube_api_key() -> bool:
+    return bool(YOUTUBE_API_KEY)
 
 
 def get_mock_recommended_track() -> RecommendationItem:
