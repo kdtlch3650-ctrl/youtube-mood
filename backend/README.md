@@ -17,7 +17,7 @@ FastAPI 기반 백엔드 API를 둘 폴더입니다.
 - `app/main.py`: FastAPI 앱과 API 경로를 관리합니다.
 - `app/config.py`: `.env` 파일에서 환경 변수를 읽습니다.
 - `app/schemas.py`: 요청과 응답 데이터 구조를 정의합니다.
-- `app/youtube.py`: YouTube 추천 데이터를 가져오는 역할을 담당합니다. 현재는 실제 API 호출 전 임시 데이터를 반환합니다.
+- `app/youtube.py`: YouTube 추천 데이터를 가져오는 역할을 담당합니다. API 호출이 실패하면 임시 데이터를 반환합니다.
 
 ## 실행 예시
 
@@ -48,7 +48,7 @@ YOUTUBE_API_KEY=발급받은_YouTube_API_키
 
 `.env` 파일은 Git에 올리지 않습니다.
 
-현재 백엔드는 `app/config.py`에서 `YOUTUBE_API_KEY` 값을 읽습니다. 값이 없더라도 서버는 실행되지만, 실제 YouTube API 호출 단계에서는 키가 필요합니다.
+현재 백엔드는 `app/config.py`에서 `YOUTUBE_API_KEY` 값을 읽습니다. 값이 없거나 YouTube API 요청이 실패하면 임시 추천 데이터를 반환합니다.
 
 ## 현재 API
 
@@ -68,7 +68,7 @@ YOUTUBE_API_KEY=발급받은_YouTube_API_키
 
 사용자가 입력한 문장을 받아 임시 감정 분석 결과를 반환하는 API입니다.
 
-현재는 실제 AI 모델이 아니라 고정된 예시 데이터를 반환합니다. 나중에 AI 모델을 연결할 때 이 API의 내부 로직을 교체할 예정입니다.
+현재 감정 분석 결과는 임시 데이터입니다. 추천 음악과 플레이리스트는 YouTube API 검색 결과를 사용하고, 요청이 실패하면 임시 추천 데이터를 반환합니다.
 
 요청 예시:
 

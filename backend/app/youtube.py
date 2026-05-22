@@ -1,9 +1,91 @@
+import requests
+
 from app.config import YOUTUBE_API_KEY
 from app.schemas import RecommendationItem
+
+YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 
 
 def has_youtube_api_key() -> bool:
     return bool(YOUTUBE_API_KEY)
+
+
+def search_youtube(query: str, result_type: str, max_results: int) -> list[dict]:
+    # API 키가 없으면 외부 요청을 보내지 않고 fallback 데이터를 사용한다.
+    if not has_youtube_api_key():
+        return []
+
+    try:
+        response = requests.get(
+            YOUTUBE_SEARCH_URL,
+            params={
+                "part": "snippet",
+                "q": query,
+                "type": result_type,
+                "maxResults": max_results,
+                "key": YOUTUBE_API_KEY,
+            },
+            timeout=5,
+        )
+        response.raise_for_status()
+    except requests.RequestException:
+        # 키 오류, 할당량 초과, 네트워크 문제로 추천 흐름 전체가 깨지지 않게 한다.
+        return []
+
+    data = response.json()
+    return data.get("items", [])
+
+
+def convert_youtube_item(item: dict, result_type: str, reason: str) -> RecommendationItem:
+    snippet = item.get("snippet", {})
+    item_id = item.get("id", {})
+    # YouTube 검색 응답은 video와 playlist의 id 필드 이름이 다르다.
+    youtube_id = item_id.get("videoId") if result_type == "video" else item_id.get("playlistId")
+    url_path = "watch?v=" if result_type == "video" else "playlist?list="
+    thumbnails = snippet.get("thumbnails", {})
+    thumbnail = thumbnails.get("medium") or thumbnails.get("default") or {}
+
+    return RecommendationItem(
+        id=youtube_id or "",
+        title=snippet.get("title", "제목 없음"),
+        channel_title=snippet.get("channelTitle", "채널 정보 없음"),
+        url=f"https://www.youtube.com/{url_path}{youtube_id}" if youtube_id else "https://www.youtube.com/",
+        thumbnail_url=thumbnail.get("url", ""),
+        reason=reason,
+    )
+
+
+def get_recommended_track(search_keywords: list[str]) -> RecommendationItem:
+    keyword = search_keywords[0] if search_keywords else "calm warm music"
+    items = search_youtube(f"{keyword} music", "video", 1)
+
+    # 검색 결과가 없으면 화면 확인이 가능하도록 임시 추천 곡을 반환한다.
+    if not items:
+        return get_mock_recommended_track()
+
+    return convert_youtube_item(
+        items[0],
+        "video",
+        "분석된 분위기와 가장 가까운 음악 검색 결과입니다.",
+    )
+
+
+def get_recommended_playlists(search_keywords: list[str]) -> list[RecommendationItem]:
+    keyword = search_keywords[0] if search_keywords else "calm warm music"
+    items = search_youtube(f"{keyword} playlist", "playlist", 3)
+
+    # 검색 결과가 없으면 화면 확인이 가능하도록 임시 플레이리스트를 반환한다.
+    if not items:
+        return get_mock_recommended_playlists()
+
+    return [
+        convert_youtube_item(
+            item,
+            "playlist",
+            "분석된 분위기를 이어서 듣기 좋은 플레이리스트 검색 결과입니다.",
+        )
+        for item in items
+    ]
 
 
 def get_mock_recommended_track() -> RecommendationItem:
