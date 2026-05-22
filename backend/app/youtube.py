@@ -55,19 +55,22 @@ def convert_youtube_item(item: dict, result_type: str, reason: str) -> Recommend
     )
 
 
-def get_recommended_track(search_keywords: list[str]) -> RecommendationItem:
+def get_recommended_tracks(search_keywords: list[str]) -> list[RecommendationItem]:
     keyword = search_keywords[0] if search_keywords else "calm warm music"
-    items = search_youtube(f"{keyword} music", "video", 1)
+    items = search_youtube(f"{keyword} music", "video", 5)
 
-    # 검색 결과가 없으면 화면 확인이 가능하도록 임시 추천 곡을 반환한다.
+    # 검색 결과가 없으면 화면 확인이 가능하도록 임시 추천 곡 목록을 반환한다.
     if not items:
-        return get_mock_recommended_track()
+        return get_mock_recommended_tracks()
 
-    return convert_youtube_item(
-        items[0],
-        "video",
-        "분석된 분위기와 가장 가까운 음악 검색 결과입니다.",
-    )
+    return [
+        convert_youtube_item(
+            item,
+            "video",
+            "분석된 분위기와 가까운 음악 검색 결과입니다.",
+        )
+        for item in items
+    ]
 
 
 def get_recommended_playlists(search_keywords: list[str]) -> list[RecommendationItem]:
@@ -88,15 +91,41 @@ def get_recommended_playlists(search_keywords: list[str]) -> list[Recommendation
     ]
 
 
-def get_mock_recommended_track() -> RecommendationItem:
-    return RecommendationItem(
-        id="track-1",
-        title="Soft Night Drive",
-        channel_title="Mood Archive",
-        url="https://www.youtube.com/",
-        thumbnail_url="",
-        reason="지친 기분을 가라앉히되 너무 무겁지 않은 분위기를 기준으로 고른 곡입니다.",
-    )
+def get_mock_recommended_tracks() -> list[RecommendationItem]:
+    return [
+        RecommendationItem(
+            id="track-1",
+            title="Soft Night Drive",
+            channel_title="Mood Archive",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="지친 기분을 가라앉히되 너무 무겁지 않은 분위기를 기준으로 고른 곡입니다.",
+        ),
+        RecommendationItem(
+            id="track-2",
+            title="Warm Static",
+            channel_title="Night Room",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="차분하지만 너무 가라앉지 않는 분위기를 이어가기 좋은 곡입니다.",
+        ),
+        RecommendationItem(
+            id="track-3",
+            title="Blue Hour Walk",
+            channel_title="Soft Studio",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="늦은 시간에 부담 없이 들을 수 있는 부드러운 곡입니다.",
+        ),
+        RecommendationItem(
+            id="track-4",
+            title="Low Light Focus",
+            channel_title="Calm Project",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="집중과 휴식 사이의 분위기를 유지하기 좋은 곡입니다.",
+        ),
+    ]
 
 
 def get_mock_recommended_playlists() -> list[RecommendationItem]:

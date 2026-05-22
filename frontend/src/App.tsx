@@ -6,7 +6,7 @@ type AnalyzeResult = {
   emotions: string[]
   mood_tags: string[]
   search_keywords: string[]
-  recommended_track: RecommendationItem
+  recommended_tracks: RecommendationItem[]
   recommended_playlists: RecommendationItem[]
 }
 
@@ -25,9 +25,17 @@ function App() {
   const [inputText, setInputText] = useState('')
   const [analysisResult, setAnalysisResult] = useState<AnalyzeResult | null>(null)
   const [selectedTab, setSelectedTab] = useState<RecommendationTab>('track')
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const isResultView = Boolean(analysisResult)
+  const recommendedTracks = analysisResult?.recommended_tracks ?? []
+  const activeTrack =
+    recommendedTracks.find((track) => track.id === selectedTrackId) ?? recommendedTracks[0]
+  const moodHighlights = [
+    ...(analysisResult?.emotions ?? []),
+    ...(analysisResult?.mood_tags ?? []),
+  ].slice(0, 4)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -55,6 +63,7 @@ function App() {
 
       const result: AnalyzeResult = await response.json()
       setAnalysisResult(result)
+      setSelectedTrackId(result.recommended_tracks[0]?.id ?? null)
     } catch {
       setErrorMessage('분석 결과를 불러오지 못했습니다. 백엔드 서버를 확인해 주세요.')
     } finally {
@@ -66,25 +75,23 @@ function App() {
     setAnalysisResult(null)
     setErrorMessage('')
     setSelectedTab('track')
+    setSelectedTrackId(null)
   }
 
   return (
     <main className="app-shell">
       {!isResultView ? (
-        <>
-          <section className="intro-section" aria-labelledby="service-title">
+        <section className="start-screen" aria-labelledby="service-title">
+          <div className="start-card">
             <p className="eyebrow">Mood based music recommendation</p>
-            <h1 id="service-title">감정 기반 음악 추천</h1>
+            <h1 id="service-title">오늘의 감정에 맞는 음악을 찾습니다</h1>
             <p className="intro-copy">
-              지금 느끼는 감정이나 상황을 문장으로 입력하면, 어울리는 음악과
-              플레이리스트를 추천하는 서비스입니다.
+              감정이나 상황을 문장으로 입력하면 분위기 태그를 분석하고, 어울리는 곡과
+              플레이리스트를 추천합니다.
             </p>
-          </section>
 
-          <section className="input-section" aria-labelledby="input-title">
-            <h2 id="input-title">현재 기분 입력</h2>
             <form className="mood-form" onSubmit={handleSubmit}>
-              <label htmlFor="mood-input">감정이나 상황</label>
+              <label htmlFor="mood-input">지금 상태를 문장으로 입력하세요</label>
               <textarea
                 id="mood-input"
                 value={inputText}
@@ -97,108 +104,115 @@ function App() {
               </button>
               {errorMessage && <p className="error-message">{errorMessage}</p>}
             </form>
-          </section>
-        </>
+          </div>
+        </section>
       ) : (
-        <section className="result-section" aria-labelledby="result-title">
-          <p className="eyebrow">Recommendation result</p>
-          <h1 id="result-title">추천 결과</h1>
-
-          <div className="result-layout">
-            <aside className="result-sidebar" aria-label="분석 요약과 추천 유형 선택">
-              <div>
-                <p className="result-label">입력 문장</p>
-                <p className="submitted-text">{analysisResult?.input_text}</p>
-              </div>
-              <div>
-                <p className="result-label">감정</p>
-                <ul className="tag-list">
-                  {analysisResult?.emotions.map((emotion) => (
-                    <li key={emotion}>{emotion}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="result-label">분위기 태그</p>
-                <ul className="tag-list">
-                  {analysisResult?.mood_tags.map((tag) => (
-                    <li key={tag}>{tag}</li>
-                  ))}
-                </ul>
-              </div>
-              <nav className="recommendation-tabs" aria-label="추천 유형">
-                <button
-                  type="button"
-                  className={selectedTab === 'track' ? 'active' : ''}
-                  onClick={() => setSelectedTab('track')}
-                >
-                  한 곡 추천
-                </button>
-                <button
-                  type="button"
-                  className={selectedTab === 'playlist' ? 'active' : ''}
-                  onClick={() => setSelectedTab('playlist')}
-                >
-                  플레이리스트
-                </button>
-              </nav>
-              <button type="button" className="secondary-button" onClick={handleReset}>
-                다시 입력하기
+        <section className="music-dashboard" aria-labelledby="result-title">
+          <aside className="dashboard-sidebar">
+            <p className="sidebar-logo">Moodify</p>
+            <nav className="recommendation-tabs" aria-label="추천 유형">
+              <button
+                type="button"
+                className={selectedTab === 'track' ? 'active' : ''}
+                onClick={() => setSelectedTab('track')}
+              >
+                <span>▮▮</span>
+                추천 곡
               </button>
-            </aside>
+              <button
+                type="button"
+                className={selectedTab === 'playlist' ? 'active' : ''}
+                onClick={() => setSelectedTab('playlist')}
+              >
+                <span>♪</span>
+                플레이리스트
+              </button>
+            </nav>
+            <button type="button" className="reset-link" onClick={handleReset}>
+              다시 입력하기
+            </button>
+          </aside>
 
-            <section className="recommendation-panel" aria-label="추천 음악 결과">
+          <section className="dashboard-main">
+            <section className="recommendation-area" aria-label="추천 음악 결과">
+              <h1 id="result-title">{selectedTab === 'track' ? 'Explore new' : 'Playlists'}</h1>
               {selectedTab === 'track' ? (
-                <article className="recommendation-card featured-card">
-                  {analysisResult?.recommended_track.thumbnail_url && (
-                    <img
-                      src={analysisResult.recommended_track.thumbnail_url}
-                      alt=""
-                      className="recommendation-thumbnail"
-                    />
-                  )}
-                  <p className="card-type">한 곡 추천</p>
-                  <h2>{analysisResult?.recommended_track.title}</h2>
-                  <p className="channel-name">{analysisResult?.recommended_track.channel_title}</p>
-                  <p>{analysisResult?.recommended_track.reason}</p>
-                  <a
-                    href={analysisResult?.recommended_track.url}
-                    className="youtube-link"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    YouTube에서 열기
-                  </a>
-                </article>
+                <div className="track-grid">
+                  {recommendedTracks.map((track) => (
+                    <button
+                      type="button"
+                      className={`track-card ${activeTrack?.id === track.id ? 'active' : ''}`}
+                      key={track.id}
+                      onClick={() => setSelectedTrackId(track.id)}
+                    >
+                      {track.thumbnail_url && <img src={track.thumbnail_url} alt="" />}
+                      <h3>{track.title}</h3>
+                      <p>{track.channel_title}</p>
+                    </button>
+                  ))}
+                </div>
               ) : (
                 <div className="playlist-grid">
-                  {analysisResult?.recommended_playlists.map((playlist) => (
-                    <article className="recommendation-card" key={playlist.id}>
-                      {playlist.thumbnail_url && (
-                        <img src={playlist.thumbnail_url} alt="" className="recommendation-thumbnail" />
+                  {analysisResult?.recommended_playlists.map((playlist, index) => (
+                    <article className="playlist-row" key={playlist.id}>
+                      {playlist.thumbnail_url ? (
+                        <img src={playlist.thumbnail_url} alt="" className="row-thumbnail" />
+                      ) : (
+                        <span className="row-index">{index + 1}</span>
                       )}
-                      <p className="card-type">플레이리스트</p>
-                      <h2>{playlist.title}</h2>
-                      <p className="channel-name">{playlist.channel_title}</p>
-                      <p>{playlist.reason}</p>
-                      <a href={playlist.url} className="youtube-link" target="_blank" rel="noreferrer">
-                        YouTube에서 열기
+                      <div>
+                        <h3>{playlist.title}</h3>
+                        <p>{playlist.channel_title}</p>
+                      </div>
+                      <a href={playlist.url} className="row-link" target="_blank" rel="noreferrer">
+                        열기
                       </a>
                     </article>
                   ))}
                 </div>
               )}
-
-              <div className="keyword-box">
-                <p className="result-label">검색 키워드</p>
-                <ul className="keyword-list">
-                  {analysisResult?.search_keywords.map((keyword) => (
-                    <li key={keyword}>{keyword}</li>
-                  ))}
-                </ul>
-              </div>
             </section>
-          </div>
+
+            <div className="detail-grid">
+              <section className="selected-track-section" aria-label="선택한 대표곡">
+                <h2>Popular</h2>
+                <article className="selected-track-card">
+                  {activeTrack?.thumbnail_url && (
+                    <img src={activeTrack.thumbnail_url} alt="" className="selected-track-image" />
+                  )}
+                  <div>
+                    <p className="card-type">Selected track</p>
+                    <h3>{activeTrack?.title}</h3>
+                    <p className="channel-name">{activeTrack?.channel_title}</p>
+                    <p>{activeTrack?.reason}</p>
+                    <a href={activeTrack?.url} className="youtube-link" target="_blank" rel="noreferrer">
+                      YouTube에서 열기
+                    </a>
+                  </div>
+                </article>
+              </section>
+              <section className="mood-panel" aria-label="감정 분석 결과">
+                <h2>Mood</h2>
+                {moodHighlights.map((tag) => (
+                  <div className="mood-card" key={tag}>
+                    <strong>{tag}</strong>
+                  </div>
+                ))}
+              </section>
+            </div>
+
+            <footer className="player-bar">
+              <span className="play-button">▶</span>
+              {activeTrack?.thumbnail_url && <img src={activeTrack.thumbnail_url} alt="" />}
+              <div>
+                <p>{activeTrack?.title}</p>
+                <span>{activeTrack?.channel_title}</span>
+              </div>
+              <a href={activeTrack?.url} target="_blank" rel="noreferrer">
+                YouTube
+              </a>
+            </footer>
+          </section>
         </section>
       )}
     </main>

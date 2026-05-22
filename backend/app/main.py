@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.schemas import AnalyzeRequest, AnalyzeResponse
-from app.youtube import get_recommended_playlists, get_recommended_track
+from app.youtube import get_recommended_playlists, get_recommended_tracks
 
 app = FastAPI(title="YouTube Mood Recommendation API")
 
@@ -30,7 +30,7 @@ def create_mock_analysis(text: str) -> AnalyzeResponse:
         emotions=["tired", "calm"],
         mood_tags=["calm", "warm", "not too sad"],
         search_keywords=search_keywords,
-        recommended_track=get_recommended_track(search_keywords),
+        recommended_tracks=get_recommended_tracks(search_keywords),
         recommended_playlists=get_recommended_playlists(search_keywords),
     )
 

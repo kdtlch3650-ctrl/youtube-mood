@@ -19,5 +19,5 @@ class AnalyzeResponse(BaseModel):
     emotions: list[str]
     mood_tags: list[str]
     search_keywords: list[str]
-    recommended_track: RecommendationItem
+    recommended_tracks: list[RecommendationItem]
     recommended_playlists: list[RecommendationItem]

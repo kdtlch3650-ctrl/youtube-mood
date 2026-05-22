@@ -1,20 +1,19 @@
 :root {
-  --accent: #2563eb;
-  --accent-soft: rgba(37, 99, 235, 0.16);
-  --background: #f8fafc;
-  --border: #d8dee9;
-  --muted: #5f6b7a;
-  --surface: #ffffff;
-  --tag-bg: #e7f0ff;
-  --tag-border: #bfd4ff;
-  --tag-text: #1d4ed8;
-  --text: #172033;
+  --accent: #4354ff;
+  --accent-soft: rgba(67, 84, 255, 0.24);
+  --background: #536171;
+  --line: rgba(255, 255, 255, 0.1);
+  --muted: rgba(235, 238, 247, 0.52);
+  --panel: rgba(255, 255, 255, 0.055);
+  --text: #f6f7fb;
 
   color: var(--text);
-  background: var(--background);
+  background:
+    radial-gradient(circle at 45% 120%, rgba(0, 0, 0, 0.32), transparent 34%),
+    var(--background);
   font-family:
-    'Segoe UI',
     'Noto Sans KR',
+    'Segoe UI',
     system-ui,
     sans-serif;
   font-synthesis: none;
@@ -35,21 +34,15 @@ body {
 
 h1,
 h2,
+h3,
 p {
   margin-top: 0;
 }
 
-h1 {
+h1,
+h2,
+h3 {
   color: var(--text);
-  font-size: clamp(40px, 8vw, 72px);
-  line-height: 1.04;
-  margin-bottom: 18px;
-}
-
-h2 {
-  color: var(--text);
-  font-size: 24px;
-  margin-bottom: 18px;
 }
 
 button,

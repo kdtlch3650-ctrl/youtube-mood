@@ -90,14 +90,16 @@ YOUTUBE_API_KEY=발급받은_YouTube_API_키
     "soft relaxing music",
     "not too sad comfort music"
   ],
-  "recommended_track": {
-    "id": "track-1",
-    "title": "Soft Night Drive",
-    "channel_title": "Mood Archive",
-    "url": "https://www.youtube.com/",
-    "thumbnail_url": "",
-    "reason": "지친 기분을 가라앉히되 너무 무겁지 않은 분위기를 기준으로 고른 곡입니다."
-  },
+  "recommended_tracks": [
+    {
+      "id": "track-1",
+      "title": "Soft Night Drive",
+      "channel_title": "Mood Archive",
+      "url": "https://www.youtube.com/",
+      "thumbnail_url": "",
+      "reason": "지친 기분을 가라앉히되 너무 무겁지 않은 분위기를 기준으로 고른 곡입니다."
+    }
+  ],
   "recommended_playlists": [
     {
       "id": "playlist-1",
