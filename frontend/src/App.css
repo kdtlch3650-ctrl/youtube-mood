@@ -170,6 +170,13 @@
   padding: 20px;
 }
 
+.recommendation-thumbnail {
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  object-fit: cover;
+  width: 100%;
+}
+
 .recommendation-card h2 {
   font-size: clamp(24px, 4vw, 44px);
   margin: 0;
@@ -200,6 +207,22 @@
 .playlist-grid {
   display: grid;
   gap: 14px;
+}
+
+.youtube-link {
+  align-self: start;
+  background: var(--text);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 10px 14px;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.youtube-link:hover {
+  background: var(--accent);
 }
 
 .keyword-box {

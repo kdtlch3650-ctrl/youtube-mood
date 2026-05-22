@@ -150,19 +150,40 @@ function App() {
             <section className="recommendation-panel" aria-label="추천 음악 결과">
               {selectedTab === 'track' ? (
                 <article className="recommendation-card featured-card">
+                  {analysisResult?.recommended_track.thumbnail_url && (
+                    <img
+                      src={analysisResult.recommended_track.thumbnail_url}
+                      alt=""
+                      className="recommendation-thumbnail"
+                    />
+                  )}
                   <p className="card-type">한 곡 추천</p>
                   <h2>{analysisResult?.recommended_track.title}</h2>
                   <p className="channel-name">{analysisResult?.recommended_track.channel_title}</p>
                   <p>{analysisResult?.recommended_track.reason}</p>
+                  <a
+                    href={analysisResult?.recommended_track.url}
+                    className="youtube-link"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    YouTube에서 열기
+                  </a>
                 </article>
               ) : (
                 <div className="playlist-grid">
                   {analysisResult?.recommended_playlists.map((playlist) => (
                     <article className="recommendation-card" key={playlist.id}>
+                      {playlist.thumbnail_url && (
+                        <img src={playlist.thumbnail_url} alt="" className="recommendation-thumbnail" />
+                      )}
                       <p className="card-type">플레이리스트</p>
                       <h2>{playlist.title}</h2>
                       <p className="channel-name">{playlist.channel_title}</p>
                       <p>{playlist.reason}</p>
+                      <a href={playlist.url} className="youtube-link" target="_blank" rel="noreferrer">
+                        YouTube에서 열기
+                      </a>
                     </article>
                   ))}
                 </div>
