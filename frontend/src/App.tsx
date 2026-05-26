@@ -139,6 +139,7 @@ function App() {
   })
   const [inputText, setInputText] = useState('')
   const [analysisResult, setAnalysisResult] = useState<AnalyzeResult | null>(null)
+  const [playlistTracksById, setPlaylistTracksById] = useState<Record<string, PlaylistTrackItem[]>>({})
   const [selectedTab, setSelectedTab] = useState<RecommendationTab>('track')
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
@@ -161,8 +162,11 @@ function App() {
     ? getYoutubeVideoId(activeTrack.url) ?? (activeTrack.id.startsWith('track-') ? null : activeTrack.id)
     : null
   const progressPercent = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0
-  const playlistTrackItems = activePlaylist?.playlist_tracks?.length
-    ? activePlaylist.playlist_tracks
+  const loadedPlaylistTracks = activePlaylist ? playlistTracksById[activePlaylist.id] : undefined
+  const playlistTrackItems = loadedPlaylistTracks?.length
+    ? loadedPlaylistTracks
+    : activePlaylist?.playlist_tracks?.length
+      ? activePlaylist.playlist_tracks
     : samplePlaylistTracks.map((title) => ({
         title,
         thumbnail_url: '',
@@ -209,6 +213,44 @@ function App() {
       block: 'start',
     })
   }, [activePlaylistTrackIndex, playlistTrackItems.length, selectedTab])
+
+  useEffect(() => {
+    if (!activePlaylist || activePlaylist.playlist_tracks?.length || playlistTracksById[activePlaylist.id]) {
+      return
+    }
+
+    const abortController = new AbortController()
+    const query = new URLSearchParams({ title: activePlaylist.title })
+
+    const loadPlaylistTracks = async () => {
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:8000/api/playlists/${encodeURIComponent(activePlaylist.id)}/tracks?${query.toString()}`,
+          { signal: abortController.signal },
+        )
+
+        if (!response.ok) {
+          return
+        }
+
+        const tracks: PlaylistTrackItem[] = await response.json()
+        setPlaylistTracksById((currentTracks) => ({
+          ...currentTracks,
+          [activePlaylist.id]: tracks,
+        }))
+      } catch (error) {
+        if (!abortController.signal.aborted) {
+          console.error(error)
+        }
+      }
+    }
+
+    void loadPlaylistTracks()
+
+    return () => {
+      abortController.abort()
+    }
+  }, [activePlaylist, playlistTracksById])
 
   useEffect(() => {
     if (window.YT?.Player) {
@@ -317,6 +359,7 @@ function App() {
 
       const result: AnalyzeResult = await response.json()
       setAnalysisResult(result)
+      setPlaylistTracksById({})
       setSelectedTrackId(result.recommended_tracks[0]?.id ?? null)
       setSelectedPlaylistId(result.recommended_playlists[0]?.id ?? null)
       setCurrentPlaylistTrackIndex(0)

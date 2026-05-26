@@ -178,6 +178,11 @@ def enrich_playlist_tracks(items: list[RecommendationItem]) -> list[Recommendati
     ]
 
 
+def get_playlist_tracks(playlist_id: str, title: str = "") -> list[PlaylistTrackItem]:
+    # 결과 페이지 진입을 빠르게 하기 위해 플레이리스트 내부 곡은 선택된 항목만 따로 조회한다.
+    return search_playlist_tracks(playlist_id) or fallback_playlist_tracks(title or playlist_id)
+
+
 def get_recommended_tracks(search_keywords: list[str]) -> list[RecommendationItem]:
     keyword = search_keywords[0] if search_keywords else "calm warm music"
     items = search_youtube(f"{keyword} music", "video", 10)
@@ -210,7 +215,7 @@ def get_recommended_playlists(search_keywords: list[str]) -> list[Recommendation
         )
         for item in items
     ]
-    return enrich_playlist_tracks(playlists)
+    return playlists
 
 
 def get_mock_recommended_tracks() -> list[RecommendationItem]:
@@ -309,87 +314,91 @@ def get_mock_recommended_tracks() -> list[RecommendationItem]:
 
 
 def get_mock_recommended_playlists() -> list[RecommendationItem]:
-    return enrich_playlist_tracks(
-        [
-            RecommendationItem(
-                id="playlist-1",
-                title="Calm but not sad playlist",
-                channel_title="Daily Sound",
-                url="https://www.youtube.com/",
-                thumbnail_url="",
-                reason="A playlist for staying light without becoming too gloomy.",
-            ),
-            RecommendationItem(
-                id="playlist-2",
-                title="Warm focus music",
-                channel_title="Studio Room",
-                url="https://www.youtube.com/",
-                thumbnail_url="",
-                reason="A playlist that helps you stay focused in a gentle way.",
-            ),
-            RecommendationItem(
-                id="playlist-3",
-                title="Late night comfort songs",
-                channel_title="Playlist Garden",
-                url="https://www.youtube.com/",
-                thumbnail_url="",
-                reason="A softer late-night playlist with a centered mood.",
-            ),
-            RecommendationItem(
-                id="playlist-4",
-                title="Soft focus rotation",
-                channel_title="Calm Desk",
-                url="https://www.youtube.com/",
-                thumbnail_url="",
-                reason="A playlist for quiet productivity.",
-            ),
-            RecommendationItem(
-                id="playlist-5",
-                title="Not too sad night mix",
-                channel_title="Night Archive",
-                url="https://www.youtube.com/",
-                thumbnail_url="",
-                reason="A night mix with a softer emotional tone.",
-            ),
-            RecommendationItem(
-                id="playlist-6",
-                title="Gentle mood reset",
-                channel_title="Mood Room",
-                url="https://www.youtube.com/",
-                thumbnail_url="",
-                reason="A playlist built for a slow mood reset.",
-            ),
-            RecommendationItem(
-                id="playlist-7",
-                title="Warm indie background",
-                channel_title="Indie Shelf",
-                url="https://www.youtube.com/",
-                thumbnail_url="",
-                reason="Indie background music with a warm texture.",
-            ),
-            RecommendationItem(
-                id="playlist-8",
-                title="Low energy comfort",
-                channel_title="Soft Channel",
-                url="https://www.youtube.com/",
-                thumbnail_url="",
-                reason="Comfort music for low-energy days.",
-            ),
-            RecommendationItem(
-                id="playlist-9",
-                title="Late walk playlist",
-                channel_title="Street Light",
-                url="https://www.youtube.com/",
-                thumbnail_url="",
-                reason="A playlist that fits a quiet night walk.",
-            ),
-            RecommendationItem(
-                id="playlist-10",
-                title="Calm electronic selection",
-                channel_title="Electronic Mood",
-                url="https://www.youtube.com/",
-                thumbnail_url="",
-                reason="Calm electronic music with a steady pulse.",
-            ),
-        ]
-    )
+    playlists = [
+        RecommendationItem(
+            id="playlist-1",
+            title="Calm but not sad playlist",
+            channel_title="Daily Sound",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="A playlist for staying light without becoming too gloomy.",
+        ),
+        RecommendationItem(
+            id="playlist-2",
+            title="Warm focus music",
+            channel_title="Studio Room",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="A playlist that helps you stay focused in a gentle way.",
+        ),
+        RecommendationItem(
+            id="playlist-3",
+            title="Late night comfort songs",
+            channel_title="Playlist Garden",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="A softer late-night playlist with a centered mood.",
+        ),
+        RecommendationItem(
+            id="playlist-4",
+            title="Soft focus rotation",
+            channel_title="Calm Desk",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="A playlist for quiet productivity.",
+        ),
+        RecommendationItem(
+            id="playlist-5",
+            title="Not too sad night mix",
+            channel_title="Night Archive",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="A night mix with a softer emotional tone.",
+        ),
+        RecommendationItem(
+            id="playlist-6",
+            title="Gentle mood reset",
+            channel_title="Mood Room",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="A playlist built for a slow mood reset.",
+        ),
+        RecommendationItem(
+            id="playlist-7",
+            title="Warm indie background",
+            channel_title="Indie Shelf",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="Indie background music with a warm texture.",
+        ),
+        RecommendationItem(
+            id="playlist-8",
+            title="Low energy comfort",
+            channel_title="Soft Channel",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="Comfort music for low-energy days.",
+        ),
+        RecommendationItem(
+            id="playlist-9",
+            title="Late walk playlist",
+            channel_title="Street Light",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="A playlist that fits a quiet night walk.",
+        ),
+        RecommendationItem(
+            id="playlist-10",
+            title="Calm electronic selection",
+            channel_title="Electronic Mood",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="Calm electronic music with a steady pulse.",
+        ),
+    ]
+
+    # Mock playlist ids are not real YouTube playlist ids, so avoid external playlistItems calls.
+    return [
+        playlist.model_copy(update={"playlist_tracks": fallback_playlist_tracks(playlist.title)})
+        for playlist in playlists
+    ]

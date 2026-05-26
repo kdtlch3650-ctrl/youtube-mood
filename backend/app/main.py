@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.ai.predict import predict_analysis
-from app.schemas import AnalyzeRequest, AnalyzeResponse
-from app.youtube import get_recommended_playlists, get_recommended_tracks
+from app.schemas import AnalyzeRequest, AnalyzeResponse, PlaylistTrackItem
+from app.youtube import get_playlist_tracks, get_recommended_playlists, get_recommended_tracks
 
 app = FastAPI(title="YouTube Mood Recommendation API")
 
@@ -35,3 +35,9 @@ def analyze_text(request: AnalyzeRequest) -> AnalyzeResponse:
         recommended_tracks=get_recommended_tracks(analysis.search_keywords),
         recommended_playlists=get_recommended_playlists(analysis.search_keywords),
     )
+
+
+@app.get("/api/playlists/{playlist_id}/tracks")
+def playlist_tracks(playlist_id: str, title: str = "") -> list[PlaylistTrackItem]:
+    # 선택한 플레이리스트의 곡 목록만 늦게 불러와 첫 결과 화면 전환 시간을 줄인다.
+    return get_playlist_tracks(playlist_id, title)
