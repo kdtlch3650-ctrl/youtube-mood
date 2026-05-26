@@ -31,3 +31,6 @@
 - 사용자는 복잡한 구조보다 바로 쓸 수 있는 구조를 원한다.
 - 사용자는 결과가 왜 나왔는지 대략 이해하고 싶어 한다.
 - 사용자는 한 번 입력한 뒤 바로 결과를 보고 싶어 한다.
+
+## 사용자 요구명세서 링크
+https://docs.google.com/spreadsheets/d/1NMTNKTPl6cDLRd4cJZz7cUuUonXU5iNCl_fbp-7AK-M/edit?usp=sharing
