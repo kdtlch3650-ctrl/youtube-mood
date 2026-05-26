@@ -36,6 +36,7 @@ type YouTubePlayer = {
   loadVideoById: (videoId: string) => void
   pauseVideo: () => void
   playVideo: () => void
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void
 }
 
 type YouTubePlayerEvent = {
@@ -113,8 +114,13 @@ function App() {
   const progressTimerRef = useRef<number | null>(null)
   const playlistTrackScrollRef = useRef<HTMLDivElement>(null)
   const playlistTrackItemRefs = useRef<Array<HTMLLIElement | null>>([])
+  const progressBarRef = useRef<HTMLDivElement>(null)
   const cardPressStartX = useRef(0)
   const ignoreClickAfterDrag = useRef(false)
+  const progressDragState = useRef({
+    isDragging: false,
+    wasPlaying: false,
+  })
   const playlistDragState = useRef({
     isDragging: false,
     lastTime: 0,
@@ -455,6 +461,84 @@ function App() {
     }
 
     requestAnimationFrame(glide)
+  }
+
+  const getSeekTimeFromPointer = (clientX: number, rail: HTMLDivElement | null) => {
+    if (!rail || duration <= 0) {
+      return null
+    }
+
+    const rect = rail.getBoundingClientRect()
+    const offsetX = Math.min(Math.max(clientX - rect.left, 0), rect.width)
+    const nextTime = (offsetX / rect.width) * duration
+
+    if (!Number.isFinite(nextTime)) {
+      return null
+    }
+
+    return Math.min(Math.max(nextTime, 0), duration)
+  }
+
+  const updateProgressPosition = (clientX: number, rail: HTMLDivElement | null) => {
+    const player = youtubePlayerRef.current
+    const nextTime = getSeekTimeFromPointer(clientX, rail)
+
+    if (nextTime === null) {
+      return
+    }
+
+    setCurrentTime(nextTime)
+
+    if (player) {
+      player.seekTo(nextTime, true)
+    }
+  }
+
+  const startProgressDrag = (event: React.PointerEvent<HTMLDivElement>, rail: HTMLDivElement | null) => {
+    if (!rail || duration <= 0) {
+      return
+    }
+
+    rail.setPointerCapture(event.pointerId)
+    progressDragState.current = {
+      isDragging: true,
+      wasPlaying: isPlayerActive,
+    }
+
+    youtubePlayerRef.current?.pauseVideo()
+    setIsPlayerActive(false)
+    event.preventDefault()
+    updateProgressPosition(event.clientX, rail)
+  }
+
+  const moveProgressDrag = (event: React.PointerEvent<HTMLDivElement>, rail: HTMLDivElement | null) => {
+    if (!progressDragState.current.isDragging || !rail) {
+      return
+    }
+
+    event.preventDefault()
+    updateProgressPosition(event.clientX, rail)
+  }
+
+  const stopProgressDrag = (event?: React.PointerEvent<HTMLDivElement>, rail?: HTMLDivElement | null) => {
+    if (!progressDragState.current.isDragging) {
+      return
+    }
+
+    progressDragState.current.isDragging = false
+
+    if (event && rail?.hasPointerCapture(event.pointerId)) {
+      rail.releasePointerCapture(event.pointerId)
+    }
+
+    if (event && rail) {
+      updateProgressPosition(event.clientX, rail)
+    }
+
+    if (progressDragState.current.wasPlaying) {
+      youtubePlayerRef.current?.playVideo()
+      setIsPlayerActive(true)
+    }
   }
 
   const selectTrack = (trackId: string) => {
@@ -876,9 +960,22 @@ function App() {
                 )}
               </div>
 
-              <div className="player-progress" aria-hidden="true">
+              <div
+                className="player-progress"
+                aria-label="재생 위치 조절"
+                role="slider"
+                tabIndex={0}
+                aria-valuemin={0}
+                aria-valuemax={Math.max(duration, 0)}
+                aria-valuenow={Math.min(currentTime, duration)}
+                onPointerCancel={(event) => stopProgressDrag(event, progressBarRef.current)}
+                onPointerDown={(event) => startProgressDrag(event, progressBarRef.current)}
+                onPointerLeave={(event) => stopProgressDrag(event, progressBarRef.current)}
+                onPointerMove={(event) => moveProgressDrag(event, progressBarRef.current)}
+                onPointerUp={(event) => stopProgressDrag(event, progressBarRef.current)}
+              >
                 <span>{formatTime(currentTime)}</span>
-                <div>
+                <div className="player-progress-bar" ref={progressBarRef}>
                   <i style={{ width: `${progressPercent}%` }} />
                 </div>
                 <span>{formatTime(duration)}</span>

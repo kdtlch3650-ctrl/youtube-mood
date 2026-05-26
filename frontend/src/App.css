@@ -146,8 +146,9 @@
   gap: 24px;
   justify-content: center;
   margin: 0 -20px;
-  min-height: 94px;
-  padding: 18px 20px;
+  box-sizing: border-box;
+  height: 94px;
+  padding: 0 20px;
 }
 
 .sidebar-player-controls button {
@@ -652,9 +653,10 @@
   display: grid;
   gap: 24px;
   grid-template-columns: 36px minmax(300px, 380px) minmax(320px, 1fr) auto;
+  box-sizing: border-box;
+  height: 94px;
   margin: 0 -42px;
-  min-height: 94px;
-  padding: 18px 42px;
+  padding: 0 42px;
   position: relative;
 }
 
@@ -740,12 +742,15 @@
   gap: 14px;
   grid-template-columns: auto minmax(120px, 1fr) auto;
   min-width: 0;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
 }
 
-.player-progress div {
+.player-progress-bar {
   background: rgba(255, 255, 255, 0.13);
   border-radius: 999px;
-  height: 6px;
+  height: 8px;
   overflow: hidden;
 }
 
@@ -756,6 +761,11 @@
   display: block;
   height: 100%;
   width: 62%;
+}
+
+.player-progress:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
 }
 
 .player-bar a {
@@ -791,7 +801,7 @@
 
   .sidebar-player-controls {
     margin: 0;
-    min-height: auto;
+    height: auto;
     padding: 0;
   }
 
@@ -831,6 +841,7 @@
 
   .player-bar {
     gap: 14px;
+    height: auto;
     grid-template-columns: 1fr;
     margin: 0 -20px;
     padding: 16px 20px;
