@@ -33,12 +33,7 @@ type YouTubePlayer = {
   destroy: () => void
   getCurrentTime: () => number
   getDuration: () => number
-  getPlaylistIndex: () => number
-  loadPlaylist: (playlist: { list: string; listType?: string; index?: number; startSeconds?: number }) => void
   loadVideoById: (videoId: string) => void
-  playVideoAt: (index: number) => void
-  nextVideo: () => void
-  previousVideo: () => void
   pauseVideo: () => void
   playVideo: () => void
 }
@@ -114,6 +109,7 @@ function App() {
   const trackRailRef = useRef<HTMLDivElement>(null)
   const playlistRailRef = useRef<HTMLDivElement>(null)
   const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
+  const loadedVideoIdRef = useRef<string | null>(null)
   const progressTimerRef = useRef<number | null>(null)
   const playlistTrackScrollRef = useRef<HTMLDivElement>(null)
   const playlistTrackItemRefs = useRef<Array<HTMLLIElement | null>>([])
@@ -158,7 +154,6 @@ function App() {
   const activeVideoId = activeTrack
     ? getYoutubeVideoId(activeTrack.url) ?? (activeTrack.id.startsWith('track-') ? null : activeTrack.id)
     : null
-  const activePlaylistId = activePlaylist?.id ?? null
   const progressPercent = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0
   const playlistTrackItems = activePlaylist?.playlist_tracks?.length
     ? activePlaylist.playlist_tracks
@@ -188,10 +183,9 @@ function App() {
     selectedTab === 'playlist'
       ? activePlaylistTrack?.url || activeRecommendation?.url
       : activeRecommendation?.url
-  const moodHighlights = [
-    ...(analysisResult?.emotions ?? []),
-    ...(analysisResult?.mood_tags ?? []),
-  ].slice(0, 4)
+  const moodHighlights = Array.from(
+    new Map((analysisResult?.mood_tags ?? []).map((tag) => [tag.toLowerCase(), tag])).values(),
+  ).slice(0, 4)
 
   useEffect(() => {
     playlistTrackItemRefs.current = playlistTrackItemRefs.current.slice(0, playlistTrackItems.length)
@@ -247,55 +241,22 @@ function App() {
           onStateChange: (event) => {
             if (event.data === window.YT?.PlayerState.PLAYING) {
               setIsPlayerActive(true)
-              if (selectedTab === 'playlist') {
-                const nextIndex = youtubePlayerRef.current?.getPlaylistIndex()
-                if (typeof nextIndex === 'number' && nextIndex >= 0) {
-                  setCurrentPlaylistTrackIndex(nextIndex)
-                }
-              }
               return
             }
 
-            if (
-              event.data === window.YT?.PlayerState.PAUSED ||
-              event.data === window.YT?.PlayerState.ENDED
-            ) {
+            if (event.data === window.YT?.PlayerState.ENDED) {
               setIsPlayerActive(false)
             }
           },
         },
       })
+      loadedVideoIdRef.current = activeVideoId
       return
-    }
-
-    if (selectedTab === 'playlist' && activePlaylistId) {
-      youtubePlayerRef.current.loadPlaylist({
-        list: activePlaylistId,
-        listType: 'playlist',
-        index: activePlaylistTrackIndex,
-        startSeconds: 0,
-      })
-      if (isPlayerActive) {
-        youtubePlayerRef.current.playVideo()
-      }
-      return
-    }
-
-    if (selectedTab === 'track' && activeVideoId) {
-      youtubePlayerRef.current.loadVideoById(activeVideoId)
-      if (isPlayerActive) {
-        youtubePlayerRef.current.playVideo()
-      }
     }
   }, [
-    activePlaylistId,
-    activePlaylistTrackIndex,
     activeVideoId,
-    currentPlaylistTrackIndex,
     isResultView,
     isYoutubeApiReady,
-    isPlayerActive,
-    selectedTab,
   ])
 
   useEffect(() => {
@@ -316,12 +277,6 @@ function App() {
 
       setCurrentTime(player.getCurrentTime())
       setDuration(player.getDuration())
-      if (selectedTab === 'playlist') {
-        const nextIndex = player.getPlaylistIndex()
-        if (typeof nextIndex === 'number' && nextIndex >= 0) {
-          setCurrentPlaylistTrackIndex(nextIndex)
-        }
-      }
     }, 500)
 
     return () => {
@@ -330,7 +285,7 @@ function App() {
         progressTimerRef.current = null
       }
     }
-  }, [isPlayerActive, selectedTab])
+  }, [isPlayerActive])
 
   const analyzeMoodText = async (text: string) => {
     const trimmedText = text.trim()
@@ -359,6 +314,7 @@ function App() {
       setSelectedTrackId(result.recommended_tracks[0]?.id ?? null)
       setSelectedPlaylistId(result.recommended_playlists[0]?.id ?? null)
       setCurrentPlaylistTrackIndex(0)
+      loadedVideoIdRef.current = null
       setIsPlayerActive(false)
       setCurrentTime(0)
       setDuration(0)
@@ -514,17 +470,21 @@ function App() {
     setDuration(0)
   }
 
-  const selectPlaylistTrack = (index: number) => {
-    if (!activePlaylistId || !playlistTrackItems.length) {
+  const playPlaylistTrack = (index: number) => {
+    if (!playlistTrackItems.length) {
       return
     }
 
     const nextIndex = Math.max(0, Math.min(index, playlistTrackItems.length - 1))
+    const track = playlistTrackItems[nextIndex]
+    if (!track?.video_id) {
+      return
+    }
+
     const player = youtubePlayerRef.current
 
     setSelectedTab('playlist')
     setCurrentPlaylistTrackIndex(nextIndex)
-    setIsPlayerActive(true)
     setCurrentTime(0)
     setDuration(0)
 
@@ -532,13 +492,12 @@ function App() {
       return
     }
 
-    player.loadPlaylist({
-      list: activePlaylistId,
-      listType: 'playlist',
-      index: nextIndex,
-      startSeconds: 0,
-    })
+    if (loadedVideoIdRef.current !== track.video_id) {
+      player.loadVideoById(track.video_id)
+      loadedVideoIdRef.current = track.video_id
+    }
     player.playVideo()
+    setIsPlayerActive(true)
   }
 
   const rememberCardPressStart = (event: React.PointerEvent<HTMLElement>) => {
@@ -589,38 +548,31 @@ function App() {
 
   const stepPlaylistTrack = (direction: 'previous' | 'next') => {
     const player = youtubePlayerRef.current
-    if (!player || !activePlaylistId) {
+    if (!player || !playlistTrackItems.length) {
       return
     }
 
-    if (!isPlayerActive) {
-      player.loadPlaylist({
-        list: activePlaylistId,
-        listType: 'playlist',
-        index: currentPlaylistTrackIndex,
-        startSeconds: 0,
-      })
-      player.playVideo()
-      setIsPlayerActive(true)
-      return
-    }
-
-    const currentIndex = player.getPlaylistIndex()
-    if (currentIndex < 0) {
-      return
-    }
-
+    const baseIndex = Math.max(0, Math.min(currentPlaylistTrackIndex, playlistTrackItems.length - 1))
     const nextIndex =
-      (currentIndex + (direction === 'previous' ? -1 : 1) + playlistTrackItems.length) %
+      (baseIndex + (direction === 'previous' ? -1 : 1) + playlistTrackItems.length) %
       playlistTrackItems.length
+    const nextTrack = playlistTrackItems[nextIndex]
 
-    player.playVideoAt(nextIndex)
+    if (!nextTrack?.video_id) {
+      return
+    }
+
+    if (loadedVideoIdRef.current !== nextTrack.video_id) {
+      player.loadVideoById(nextTrack.video_id)
+      loadedVideoIdRef.current = nextTrack.video_id
+    }
+
     player.playVideo()
     setCurrentPlaylistTrackIndex(nextIndex)
-
-    if (direction === 'previous') {
-      return
-    }
+    setSelectedTab('playlist')
+    setIsPlayerActive(true)
+    setCurrentTime(0)
+    setDuration(0)
   }
 
   const togglePlayer = () => {
@@ -635,23 +587,23 @@ function App() {
       return
     }
 
-    if (selectedTab === 'playlist') {
-      if (!activePlaylistId) {
-        return
-      }
+    const targetVideoId =
+      selectedTab === 'playlist'
+        ? playlistTrackItems[currentPlaylistTrackIndex]?.video_id ?? null
+        : activeVideoId
 
-      player.loadPlaylist({
-        list: activePlaylistId,
-        listType: 'playlist',
-        index: currentPlaylistTrackIndex,
-        startSeconds: 0,
-      })
-      player.playVideo()
-      setIsPlayerActive(true)
+    if (!targetVideoId) {
       return
     }
 
-    if (!activeVideoId) {
+    if (loadedVideoIdRef.current !== targetVideoId) {
+      player.loadVideoById(targetVideoId)
+      loadedVideoIdRef.current = targetVideoId
+    }
+
+    if (selectedTab === 'playlist') {
+      player.playVideo()
+      setIsPlayerActive(true)
       return
     }
 
@@ -725,7 +677,8 @@ function App() {
                 className="player-main-button"
                 onClick={togglePlayer}
                 disabled={
-                  (selectedTab === 'track' ? !activeVideoId : !activePlaylistId) || !isYoutubeApiReady
+                  (selectedTab === 'track' ? !activeVideoId : !playlistTrackItems[currentPlaylistTrackIndex]?.video_id) ||
+                  !isYoutubeApiReady
                 }
                 aria-label={isPlayerActive ? '재생 중지' : selectedTab === 'track' ? '선택한 곡 재생' : '선택한 플레이리스트 재생'}
               >
@@ -866,10 +819,10 @@ function App() {
                               }}
                               role="button"
                               tabIndex={0}
-                              onClick={() => selectPlaylistTrack(index)}
+                              onClick={() => playPlaylistTrack(index)}
                               onKeyDown={(event) => {
                                 if (event.key === 'Enter' || event.key === ' ') {
-                                  selectPlaylistTrack(index)
+                                  playPlaylistTrack(index)
                                 }
                               }}
                             >

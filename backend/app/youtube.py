@@ -189,7 +189,7 @@ def get_recommended_tracks(search_keywords: list[str]) -> list[RecommendationIte
         convert_youtube_item(
             item,
             "video",
-            "A calm track that fits the current mood.",
+            "Matched to the current search.",
         )
         for item in items
     ]

@@ -619,10 +619,12 @@
 .mood-card strong {
   color: var(--text);
   display: block;
-  font-size: clamp(18px, 2vw, 24px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: clamp(14px, 1.7vw, 20px);
+  line-height: 1.25;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .tag-list {
