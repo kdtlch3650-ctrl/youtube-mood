@@ -19,6 +19,7 @@
 ml/
   README.md
   data-labeling-guide.md
+  predict_sample.py
   prepare_kote.py
   train.py
   data/
@@ -121,7 +122,17 @@ cuda False
 `cuda False`는 현재 CPU 학습 환경이라는 뜻이다.
 나중에 실제 전체 학습을 GPU로 진행하려면 GPU용 PyTorch를 다시 설치하면 된다.
 
-## 8. 주의할 점
+## 8. 샘플 추론
+
+학습된 모델이 저장된 뒤 아래 명령으로 문장 하나를 테스트할 수 있다.
+
+```bash
+ml/.venv/Scripts/python ml/predict_sample.py "오늘 너무 지치고 아무것도 하기 싫다"
+```
+
+출력은 점수가 높은 KOTE 감정 라벨 순서로 표시된다.
+
+## 9. 주의할 점
 
 - 학습용 코드는 백엔드 실행 코드와 분리한다.
 - KOTE 원본 TSV와 변환된 JSONL은 재생성 가능한 데이터이므로 Git에 포함하지 않는다.
@@ -130,7 +141,7 @@ cuda False
 - 저장소에는 `ml/models/.gitkeep`만 유지해서 폴더 구조만 남긴다.
 - 새 라이브러리 설치가 필요하면 먼저 목적과 영향을 확인한 뒤 추가한다.
 
-## 9. 모델 산출물 관리 기준
+## 10. 모델 산출물 관리 기준
 
 학습을 실행하면 `ml/models/mood-roberta-small/` 아래에 모델 파일이 생성된다.
 
