@@ -19,6 +19,7 @@
 ml/
   README.md
   data-labeling-guide.md
+  evaluate.py
   predict_sample.py
   prepare_kote.py
   train.py
@@ -132,7 +133,24 @@ ml/.venv/Scripts/python ml/predict_sample.py "오늘 너무 지치고 아무것�
 
 출력은 점수가 높은 KOTE 감정 라벨 순서로 표시된다.
 
-## 9. 주의할 점
+## 9. 모델 평가
+
+학습된 모델의 현재 성능을 간단히 확인하려면 아래 명령을 사용한다.
+
+```bash
+ml/.venv/Scripts/python ml/evaluate.py --max-samples 200
+```
+
+평가 스크립트는 아래 지표를 출력한다.
+
+- `precision_micro`
+- `recall_micro`
+- `f1_micro`
+- `f1_macro`
+
+현재 샘플 모델은 작은 데이터로만 학습했기 때문에 점수보다 평가 흐름이 정상 동작하는지 확인하는 것이 목적이다.
+
+## 10. 주의할 점
 
 - 학습용 코드는 백엔드 실행 코드와 분리한다.
 - KOTE 원본 TSV와 변환된 JSONL은 재생성 가능한 데이터이므로 Git에 포함하지 않는다.
@@ -141,7 +159,7 @@ ml/.venv/Scripts/python ml/predict_sample.py "오늘 너무 지치고 아무것�
 - 저장소에는 `ml/models/.gitkeep`만 유지해서 폴더 구조만 남긴다.
 - 새 라이브러리 설치가 필요하면 먼저 목적과 영향을 확인한 뒤 추가한다.
 
-## 10. 모델 산출물 관리 기준
+## 11. 모델 산출물 관리 기준
 
 학습을 실행하면 `ml/models/mood-roberta-small/` 아래에 모델 파일이 생성된다.
 
