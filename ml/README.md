@@ -91,8 +91,35 @@ ml/data/kote_training_data.jsonl
 - `torch`: 모델 학습과 추론에 사용한다.
 - `transformers`: `klue/roberta-small` 모델과 토크나이저를 불러온다.
 - `scikit-learn`: 학습/검증 데이터 분리와 평가 지표 계산에 사용한다.
+- `accelerate`: Hugging Face `Trainer`가 CPU/GPU 학습 장치를 다루는 데 사용한다.
 
 설치는 실제 학습 스크립트를 만들기 전에 진행한다.
+
+학습 환경은 백엔드 실행 환경과 분리해서 `ml/.venv`에 만든다.
+
+```bash
+py -3.11 -m venv ml/.venv
+ml/.venv/Scripts/python -m pip install -r ml/requirements.txt
+```
+
+처음에는 전체 데이터를 바로 학습하지 않고 작은 샘플로 실행한다.
+
+```bash
+ml/.venv/Scripts/python ml/train.py --max-samples 500
+```
+
+학습 환경 확인 예시:
+
+```text
+torch 2.12.0+cpu
+transformers 5.9.0
+sklearn 1.8.0
+accelerate 1.13.0
+cuda False
+```
+
+`cuda False`는 현재 CPU 학습 환경이라는 뜻이다.
+나중에 실제 전체 학습을 GPU로 진행하려면 GPU용 PyTorch를 다시 설치하면 된다.
 
 ## 8. 주의할 점
 

@@ -1,4 +1,5 @@
 import json
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 from sklearn.model_selection import train_test_split
@@ -46,6 +47,14 @@ def load_jsonl(path: Path) -> list[dict]:
         return [json.loads(line) for line in file if line.strip()]
 
 
+def limit_rows(rows: list[dict], max_samples: int | None) -> list[dict]:
+    if max_samples is None:
+        return rows
+
+    # 처음에는 전체 데이터가 아니라 작은 샘플로 학습 파이프라인만 검증한다.
+    return rows[:max_samples]
+
+
 def collect_labels(rows: list[dict]) -> list[str]:
     labels = set()
 
@@ -71,8 +80,20 @@ def encode_labels(rows: list[dict], label_names: list[str]) -> list[list[float]]
     return encoded_rows
 
 
+def parse_args() -> Namespace:
+    parser = ArgumentParser(description="Train KOTE emotion classifier.")
+    parser.add_argument(
+        "--max-samples",
+        type=int,
+        default=None,
+        help="Use only the first N rows for a quick training pipeline test.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
-    rows = load_jsonl(DATA_PATH)
+    args = parse_args()
+    rows = limit_rows(load_jsonl(DATA_PATH), args.max_samples)
     label_names = collect_labels(rows)
     labels = encode_labels(rows, label_names)
     texts = [row["text"] for row in rows]
@@ -100,7 +121,7 @@ def main() -> None:
         per_device_train_batch_size=4,
         per_device_eval_batch_size=4,
         num_train_epochs=3,
-        evaluation_strategy="epoch",
+        eval_strategy="epoch",
         save_strategy="epoch",
         logging_steps=10,
     )
@@ -110,7 +131,6 @@ def main() -> None:
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=valid_dataset,
-        tokenizer=tokenizer,
     )
 
     trainer.train()
