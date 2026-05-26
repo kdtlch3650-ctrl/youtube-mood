@@ -142,6 +142,12 @@ ml/.venv/Scripts/python ml/predict_sample.py "오늘 너무 지치고 아무것�
 ml/.venv/Scripts/python ml/evaluate.py --max-samples 200
 ```
 
+여러 threshold를 비교하려면 아래처럼 실행한다.
+
+```bash
+ml/.venv/Scripts/python ml/evaluate.py --max-samples 500 --thresholds 0.3 0.4 0.5
+```
+
 평가 스크립트는 아래 지표를 출력한다.
 
 - `precision_micro`

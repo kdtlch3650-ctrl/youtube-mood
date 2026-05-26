@@ -890,3 +890,20 @@ CPU 기준으로 KOTE 학습 파이프라인을 검증할 수 있는 별도 ML �
 - 최종 train loss는 약 `0.4365`로 확인됐다.
 - 평가 결과는 `precision_micro 0.7342`, `recall_micro 0.0781`, `f1_micro 0.1411`, `f1_macro 0.0416`으로 확인됐다.
 - 모델 산출물은 Git 추적 대상에서 제외된 상태로 유지됐다.
+
+## 2026-05-26 AI 평가 threshold 비교 기능 추가
+
+### 작업 목적
+
+멀티라벨 감정 분류에서 threshold 값에 따라 precision, recall, F1이 어떻게 달라지는지 확인한다.
+
+### 작업 내용
+
+- `ml/evaluate.py`에 `--thresholds` 옵션을 추가했다.
+- 모델 예측 점수를 한 번만 계산하고 여러 threshold에 재사용하도록 변경했다.
+- `ml/README.md`에 threshold 비교 실행 예시를 추가했다.
+
+### 확인 결과
+
+- `0.3`, `0.4`, `0.5` threshold를 한 번에 비교할 수 있게 됐다.
+- 500개 샘플 모델 기준 `threshold 0.3`에서 `f1_micro 0.4240`으로 가장 높게 나왔다.

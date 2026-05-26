@@ -17,6 +17,13 @@ def parse_args() -> Namespace:
     parser = ArgumentParser(description="Evaluate trained KOTE emotion classifier.")
     parser.add_argument("--max-samples", type=int, default=200, help="Use only the first N rows for quick evaluation.")
     parser.add_argument("--threshold", type=float, default=0.5, help="Prediction threshold for multi-label scores.")
+    parser.add_argument(
+        "--thresholds",
+        type=float,
+        nargs="+",
+        default=None,
+        help="Compare multiple thresholds, for example: --thresholds 0.3 0.4 0.5",
+    )
     return parser.parse_args()
 
 
@@ -45,12 +52,12 @@ def encode_labels(rows: list[dict], label_names: list[str]) -> list[list[int]]:
     return encoded_rows
 
 
-def predict_rows(rows: list[dict], threshold: float) -> tuple[list[list[int]], list[list[int]]]:
+def predict_scores(rows: list[dict]) -> tuple[list[list[int]], list[list[float]]]:
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
     model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
     label_names = load_labels(MODEL_DIR / "labels.json")
     true_labels = encode_labels(rows, label_names)
-    predicted_labels = []
+    predicted_scores = []
 
     model.eval()
 
@@ -66,25 +73,40 @@ def predict_rows(rows: list[dict], threshold: float) -> tuple[list[list[int]], l
         with torch.no_grad():
             outputs = model(**encoded)
 
-        # threshold 이상인 라벨을 모델이 선택한 감정으로 본다.
         scores = torch.sigmoid(outputs.logits).squeeze(0)
-        predicted_labels.append([1 if score >= threshold else 0 for score in scores.tolist()])
+        predicted_scores.append(scores.tolist())
 
-    return true_labels, predicted_labels
+    return true_labels, predicted_scores
+
+
+def apply_threshold(scores: list[list[float]], threshold: float) -> list[list[int]]:
+    # threshold 이상인 라벨을 모델이 선택한 감정으로 본다.
+    return [[1 if score >= threshold else 0 for score in row] for row in scores]
+
+
+def print_metrics(true_labels: list[list[int]], predicted_labels: list[list[int]], threshold: float) -> None:
+    print(f"threshold\t{threshold}")
+    print(f"precision_micro\t{precision_score(true_labels, predicted_labels, average='micro', zero_division=0):.4f}")
+    print(f"recall_micro\t{recall_score(true_labels, predicted_labels, average='micro', zero_division=0):.4f}")
+    print(f"f1_micro\t{f1_score(true_labels, predicted_labels, average='micro', zero_division=0):.4f}")
+    print(f"f1_macro\t{f1_score(true_labels, predicted_labels, average='macro', zero_division=0):.4f}")
 
 
 def main() -> None:
     args = parse_args()
     rows = load_jsonl(DATA_PATH)[: args.max_samples]
     _, valid_rows = train_test_split(rows, test_size=0.2, random_state=42)
-    true_labels, predicted_labels = predict_rows(valid_rows, args.threshold)
+    true_labels, predicted_scores = predict_scores(valid_rows)
+    thresholds = args.thresholds if args.thresholds else [args.threshold]
 
     print(f"samples\t{len(valid_rows)}")
-    print(f"threshold\t{args.threshold}")
-    print(f"precision_micro\t{precision_score(true_labels, predicted_labels, average='micro', zero_division=0):.4f}")
-    print(f"recall_micro\t{recall_score(true_labels, predicted_labels, average='micro', zero_division=0):.4f}")
-    print(f"f1_micro\t{f1_score(true_labels, predicted_labels, average='micro', zero_division=0):.4f}")
-    print(f"f1_macro\t{f1_score(true_labels, predicted_labels, average='macro', zero_division=0):.4f}")
+
+    for index, threshold in enumerate(thresholds):
+        if index > 0:
+            print()
+
+        predicted_labels = apply_threshold(predicted_scores, threshold)
+        print_metrics(true_labels, predicted_labels, threshold)
 
 
 if __name__ == "__main__":
