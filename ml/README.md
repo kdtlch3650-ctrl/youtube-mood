@@ -19,8 +19,11 @@
 ml/
   README.md
   data-labeling-guide.md
+  prepare_kote.py
   train.py
   data/
+    raw/
+      .gitkeep
     sample_training_data.jsonl
   models/
     .gitkeep
@@ -43,11 +46,34 @@ KOTE 데이터셋을 사용할 때는 원본 감정 라벨을 우선 유지한�
 
 실제 학습 단계에서는 아래 파일을 사용한다.
 
+- `prepare_kote.py`: KOTE 원본 TSV를 JSONL 학습 데이터로 변환하는 스크립트
 - `train.py`: 모델 학습 스크립트 초안
 - `evaluate.py`: 검증 데이터 평가 스크립트
 - `predict_sample.py`: 학습된 모델로 샘플 문장을 테스트하는 스크립트
 
-## 5. 학습 스크립트 흐름
+## 5. KOTE 데이터 준비 흐름
+
+KOTE 원본 TSV 파일은 Git에 직접 포함하지 않고 `ml/data/raw/` 폴더에 둔다.
+
+예상 파일명:
+
+- `train.tsv`
+- `val.tsv`
+- `test.tsv`
+
+아래 명령으로 학습용 JSONL 파일을 만든다.
+
+```bash
+python ml/prepare_kote.py
+```
+
+생성 결과:
+
+```text
+ml/data/kote_training_data.jsonl
+```
+
+## 6. 학습 스크립트 흐름
 
 `train.py`는 아래 순서로 동작한다.
 
@@ -57,7 +83,7 @@ KOTE 데이터셋을 사용할 때는 원본 감정 라벨을 우선 유지한�
 - `klue/roberta-small` 토크나이저와 모델을 불러온다.
 - 학습이 끝나면 모델과 라벨 목록을 `ml/models/mood-roberta-small/`에 저장한다.
 
-## 6. 학습 의존성
+## 7. 학습 의존성
 
 1차 학습에 필요한 라이브러리는 `ml/requirements.txt`에 따로 관리한다.
 
@@ -67,7 +93,7 @@ KOTE 데이터셋을 사용할 때는 원본 감정 라벨을 우선 유지한�
 
 설치는 실제 학습 스크립트를 만들기 전에 진행한다.
 
-## 7. 주의할 점
+## 8. 주의할 점
 
 - 학습용 코드는 백엔드 실행 코드와 분리한다.
 - 학습된 모델 파일은 크기가 커질 수 있으므로 Git에 바로 올릴지 따로 판단한다.
