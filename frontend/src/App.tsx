@@ -12,6 +12,13 @@ type AnalyzeResult = {
 
 type RecommendationTab = 'track' | 'playlist'
 
+type PlaylistTrackItem = {
+  title: string
+  thumbnail_url: string
+  url: string
+  video_id: string
+}
+
 type RecommendationItem = {
   id: string
   title: string
@@ -19,7 +26,7 @@ type RecommendationItem = {
   url: string
   thumbnail_url: string
   reason: string
-  playlist_tracks?: string[]
+  playlist_tracks?: PlaylistTrackItem[]
 }
 
 type YouTubePlayer = {
@@ -29,6 +36,7 @@ type YouTubePlayer = {
   getPlaylistIndex: () => number
   loadPlaylist: (playlist: { list: string; listType?: string; index?: number; startSeconds?: number }) => void
   loadVideoById: (videoId: string) => void
+  playVideoAt: (index: number) => void
   nextVideo: () => void
   previousVideo: () => void
   pauseVideo: () => void
@@ -152,12 +160,34 @@ function App() {
     : null
   const activePlaylistId = activePlaylist?.id ?? null
   const progressPercent = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0
-  const playlistTrackTitles = activePlaylist?.playlist_tracks ?? []
-  const playlistTrackItems = playlistTrackTitles.length ? playlistTrackTitles : samplePlaylistTracks
+  const playlistTrackItems = activePlaylist?.playlist_tracks?.length
+    ? activePlaylist.playlist_tracks
+    : samplePlaylistTracks.map((title) => ({
+        title,
+        thumbnail_url: '',
+        url: 'https://www.youtube.com/',
+        video_id: '',
+      }))
   const activePlaylistTrackIndex = playlistTrackItems.length
     ? Math.min(currentPlaylistTrackIndex, playlistTrackItems.length - 1)
     : 0
-  const activePlaylistTrackTitle = playlistTrackItems[activePlaylistTrackIndex] ?? playlistTrackItems[0] ?? ''
+  const activePlaylistTrack = playlistTrackItems[activePlaylistTrackIndex] ?? playlistTrackItems[0] ?? null
+  const selectedCardImage =
+    selectedTab === 'playlist'
+      ? activePlaylistTrack?.thumbnail_url || activeRecommendation?.thumbnail_url
+      : activeRecommendation?.thumbnail_url
+  const selectedCardTitle =
+    selectedTab === 'playlist'
+      ? activePlaylistTrack?.title || activeRecommendation?.title
+      : activeRecommendation?.title
+  const selectedCardSubtitle =
+    selectedTab === 'playlist'
+      ? activePlaylist?.title || activeRecommendation?.channel_title
+      : activeRecommendation?.channel_title
+  const selectedCardUrl =
+    selectedTab === 'playlist'
+      ? activePlaylistTrack?.url || activeRecommendation?.url
+      : activeRecommendation?.url
   const moodHighlights = [
     ...(analysisResult?.emotions ?? []),
     ...(analysisResult?.mood_tags ?? []),
@@ -242,16 +272,31 @@ function App() {
       youtubePlayerRef.current.loadPlaylist({
         list: activePlaylistId,
         listType: 'playlist',
-        index: 0,
+        index: activePlaylistTrackIndex,
         startSeconds: 0,
       })
+      if (isPlayerActive) {
+        youtubePlayerRef.current.playVideo()
+      }
       return
     }
 
     if (selectedTab === 'track' && activeVideoId) {
       youtubePlayerRef.current.loadVideoById(activeVideoId)
+      if (isPlayerActive) {
+        youtubePlayerRef.current.playVideo()
+      }
     }
-  }, [activePlaylistId, activeVideoId, isResultView, isYoutubeApiReady, selectedTab])
+  }, [
+    activePlaylistId,
+    activePlaylistTrackIndex,
+    activeVideoId,
+    currentPlaylistTrackIndex,
+    isResultView,
+    isYoutubeApiReady,
+    isPlayerActive,
+    selectedTab,
+  ])
 
   useEffect(() => {
     if (progressTimerRef.current) {
@@ -469,6 +514,33 @@ function App() {
     setDuration(0)
   }
 
+  const selectPlaylistTrack = (index: number) => {
+    if (!activePlaylistId || !playlistTrackItems.length) {
+      return
+    }
+
+    const nextIndex = Math.max(0, Math.min(index, playlistTrackItems.length - 1))
+    const player = youtubePlayerRef.current
+
+    setSelectedTab('playlist')
+    setCurrentPlaylistTrackIndex(nextIndex)
+    setIsPlayerActive(true)
+    setCurrentTime(0)
+    setDuration(0)
+
+    if (!player) {
+      return
+    }
+
+    player.loadPlaylist({
+      list: activePlaylistId,
+      listType: 'playlist',
+      index: nextIndex,
+      startSeconds: 0,
+    })
+    player.playVideo()
+  }
+
   const rememberCardPressStart = (event: React.PointerEvent<HTMLElement>) => {
     cardPressStartX.current = event.clientX
   }
@@ -525,27 +597,30 @@ function App() {
       player.loadPlaylist({
         list: activePlaylistId,
         listType: 'playlist',
-        index: 0,
+        index: currentPlaylistTrackIndex,
         startSeconds: 0,
       })
       player.playVideo()
       setIsPlayerActive(true)
-      setCurrentPlaylistTrackIndex(0)
       return
     }
 
-    if (direction === 'previous') {
-      player.previousVideo()
-    } else {
-      player.nextVideo()
+    const currentIndex = player.getPlaylistIndex()
+    if (currentIndex < 0) {
+      return
     }
 
-    window.setTimeout(() => {
-      const nextIndex = player.getPlaylistIndex?.()
-      if (typeof nextIndex === 'number' && nextIndex >= 0) {
-        setCurrentPlaylistTrackIndex(nextIndex)
-      }
-    }, 0)
+    const nextIndex =
+      (currentIndex + (direction === 'previous' ? -1 : 1) + playlistTrackItems.length) %
+      playlistTrackItems.length
+
+    player.playVideoAt(nextIndex)
+    player.playVideo()
+    setCurrentPlaylistTrackIndex(nextIndex)
+
+    if (direction === 'previous') {
+      return
+    }
   }
 
   const togglePlayer = () => {
@@ -568,12 +643,11 @@ function App() {
       player.loadPlaylist({
         list: activePlaylistId,
         listType: 'playlist',
-        index: 0,
+        index: currentPlaylistTrackIndex,
         startSeconds: 0,
       })
       player.playVideo()
       setIsPlayerActive(true)
-      setCurrentPlaylistTrackIndex(0)
       return
     }
 
@@ -758,23 +832,21 @@ function App() {
               <section className="selected-track-section" aria-label="선택한 대표곡">
                 <h2>Popular</h2>
                 <article className="selected-track-card">
-                  {activeRecommendation?.thumbnail_url && (
-                    <img src={activeRecommendation.thumbnail_url} alt="" className="selected-track-image" />
+                  {selectedCardImage && (
+                    <img src={selectedCardImage} alt="" className="selected-track-image" />
                   )}
                   <div>
                     {selectedTab === 'track' && <p className="card-type">Selected track</p>}
                     <a
-                      href={activeRecommendation?.url}
+                      href={selectedCardUrl}
                       className="selected-track-title-link"
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <h3>{activeRecommendation?.title}</h3>
+                      <h3>{selectedCardTitle}</h3>
                     </a>
-                    <p className="channel-name">{activeRecommendation?.channel_title}</p>
-                    {selectedTab === 'track' ? (
-                      <p>{activeRecommendation?.reason}</p>
-                    ) : (
+                    <p className="channel-name">{selectedCardSubtitle}</p>
+                    {selectedTab === 'playlist' && (
                       <div
                         className="playlist-track-scroll draggable-rail vertical-rail"
                         ref={playlistTrackScrollRef}
@@ -792,9 +864,21 @@ function App() {
                               ref={(node) => {
                                 playlistTrackItemRefs.current[index] = node
                               }}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => selectPlaylistTrack(index)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                  selectPlaylistTrack(index)
+                                }
+                              }}
                             >
-                              <span className="playlist-track-number">{index + 1}</span>
-                              <span className="playlist-track-title">{track}</span>
+                              {track.thumbnail_url ? (
+                                <img className="playlist-track-thumb" src={track.thumbnail_url} alt="" />
+                              ) : (
+                                <span className="playlist-track-number">{index + 1}</span>
+                              )}
+                              <span className="playlist-track-title">{track.title}</span>
                             </li>
                           ))}
                         </ol>
@@ -821,10 +905,13 @@ function App() {
 
               <div className="player-track-info">
                 {selectedTab === 'playlist' ? (
-                  <div className="player-track-copy">
-                    <p>{activePlaylistTrackTitle || activeRecommendation?.title}</p>
-                    <span>{activeRecommendation?.title}</span>
-                  </div>
+                  <>
+                    {selectedCardImage && <img src={selectedCardImage} alt="" />}
+                    <div className="player-track-copy">
+                      <p>{selectedCardTitle}</p>
+                      <span>{selectedCardSubtitle}</span>
+                    </div>
+                  </>
                 ) : (
                   <>
                     {activeRecommendation?.thumbnail_url && <img src={activeRecommendation.thumbnail_url} alt="" />}

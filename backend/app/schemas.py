@@ -5,6 +5,13 @@ class AnalyzeRequest(BaseModel):
     text: str = Field(min_length=1)
 
 
+class PlaylistTrackItem(BaseModel):
+    title: str
+    thumbnail_url: str
+    url: str
+    video_id: str
+
+
 class RecommendationItem(BaseModel):
     id: str
     title: str
@@ -12,7 +19,7 @@ class RecommendationItem(BaseModel):
     url: str
     thumbnail_url: str
     reason: str
-    playlist_tracks: list[str] = Field(default_factory=list)
+    playlist_tracks: list[PlaylistTrackItem] = Field(default_factory=list)
 
 
 class AnalyzeResponse(BaseModel):

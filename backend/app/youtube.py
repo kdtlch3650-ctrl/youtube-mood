@@ -1,7 +1,7 @@
 import requests
 
 from app.config import YOUTUBE_API_KEY
-from app.schemas import RecommendationItem
+from app.schemas import PlaylistTrackItem, RecommendationItem
 
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 YOUTUBE_PLAYLIST_ITEMS_URL = "https://www.googleapis.com/youtube/v3/playlistItems"
@@ -37,7 +37,7 @@ def search_youtube(query: str, result_type: str, max_results: int) -> list[dict]
     return data.get("items", [])
 
 
-def search_playlist_tracks(playlist_id: str, max_results: int = 10) -> list[str]:
+def search_playlist_tracks(playlist_id: str, max_results: int = 10) -> list[PlaylistTrackItem]:
     if not has_youtube_api_key() or not playlist_id:
         return []
 
@@ -57,26 +57,93 @@ def search_playlist_tracks(playlist_id: str, max_results: int = 10) -> list[str]
         return []
 
     data = response.json()
-    return [
-        item.get("snippet", {}).get("title", "Untitled track")
-        for item in data.get("items", [])
-        if item.get("snippet", {}).get("title")
-    ]
+    playlist_tracks: list[PlaylistTrackItem] = []
+    for item in data.get("items", []):
+        snippet = item.get("snippet", {})
+        title = snippet.get("title")
+        resource_id = snippet.get("resourceId", {})
+        video_id = resource_id.get("videoId") or ""
+        thumbnails = snippet.get("thumbnails", {})
+        thumbnail = thumbnails.get("medium") or thumbnails.get("default") or {}
+
+        if not title:
+            continue
+
+        playlist_tracks.append(
+            PlaylistTrackItem(
+                title=title,
+                thumbnail_url=thumbnail.get("url", ""),
+                url=f"https://www.youtube.com/watch?v={video_id}" if video_id else "https://www.youtube.com/",
+                video_id=video_id,
+            )
+        )
+
+    return playlist_tracks
 
 
-def fallback_playlist_tracks(label: str) -> list[str]:
+def fallback_playlist_tracks(label: str) -> list[PlaylistTrackItem]:
     base_label = label or "playlist"
     return [
-        f"{base_label} track 1",
-        f"{base_label} track 2",
-        f"{base_label} track 3",
-        f"{base_label} track 4",
-        f"{base_label} track 5",
-        f"{base_label} track 6",
-        f"{base_label} track 7",
-        f"{base_label} track 8",
-        f"{base_label} track 9",
-        f"{base_label} track 10",
+        PlaylistTrackItem(
+            title=f"{base_label} track 1",
+            thumbnail_url="",
+            url="https://www.youtube.com/",
+            video_id="",
+        ),
+        PlaylistTrackItem(
+            title=f"{base_label} track 2",
+            thumbnail_url="",
+            url="https://www.youtube.com/",
+            video_id="",
+        ),
+        PlaylistTrackItem(
+            title=f"{base_label} track 3",
+            thumbnail_url="",
+            url="https://www.youtube.com/",
+            video_id="",
+        ),
+        PlaylistTrackItem(
+            title=f"{base_label} track 4",
+            thumbnail_url="",
+            url="https://www.youtube.com/",
+            video_id="",
+        ),
+        PlaylistTrackItem(
+            title=f"{base_label} track 5",
+            thumbnail_url="",
+            url="https://www.youtube.com/",
+            video_id="",
+        ),
+        PlaylistTrackItem(
+            title=f"{base_label} track 6",
+            thumbnail_url="",
+            url="https://www.youtube.com/",
+            video_id="",
+        ),
+        PlaylistTrackItem(
+            title=f"{base_label} track 7",
+            thumbnail_url="",
+            url="https://www.youtube.com/",
+            video_id="",
+        ),
+        PlaylistTrackItem(
+            title=f"{base_label} track 8",
+            thumbnail_url="",
+            url="https://www.youtube.com/",
+            video_id="",
+        ),
+        PlaylistTrackItem(
+            title=f"{base_label} track 9",
+            thumbnail_url="",
+            url="https://www.youtube.com/",
+            video_id="",
+        ),
+        PlaylistTrackItem(
+            title=f"{base_label} track 10",
+            thumbnail_url="",
+            url="https://www.youtube.com/",
+            video_id="",
+        ),
     ]
 
 
