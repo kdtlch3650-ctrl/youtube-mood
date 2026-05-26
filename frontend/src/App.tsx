@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
 type AnalyzeResult = {
@@ -19,15 +19,106 @@ type RecommendationItem = {
   url: string
   thumbnail_url: string
   reason: string
+  playlist_tracks?: string[]
 }
 
-const samplePlaylistTracks = ['첫 번째 추천 트랙', '두 번째 추천 트랙', '세 번째 추천 트랙']
+type YouTubePlayer = {
+  destroy: () => void
+  getCurrentTime: () => number
+  getDuration: () => number
+  getPlaylistIndex: () => number
+  loadPlaylist: (playlist: { list: string; listType?: string; index?: number; startSeconds?: number }) => void
+  loadVideoById: (videoId: string) => void
+  nextVideo: () => void
+  previousVideo: () => void
+  pauseVideo: () => void
+  playVideo: () => void
+}
+
+type YouTubePlayerEvent = {
+  data: number
+}
+
+type YouTubePlayerOptions = {
+  events: {
+    onStateChange: (event: YouTubePlayerEvent) => void
+  }
+  height: string
+  playerVars: {
+    autoplay: number
+    playsinline: number
+  }
+  videoId?: string
+  width: string
+}
+
+type YouTubeApi = {
+  Player: new (elementId: string, options: YouTubePlayerOptions) => YouTubePlayer
+  PlayerState: {
+    ENDED: number
+    PAUSED: number
+    PLAYING: number
+  }
+}
+
+declare global {
+  interface Window {
+    YT?: YouTubeApi
+    onYouTubeIframeAPIReady?: () => void
+  }
+}
+
+const samplePlaylistTracks = [
+  '첫 번째 추천 트랙',
+  '두 번째 추천 트랙',
+  '세 번째 추천 트랙',
+  '네 번째 추천 트랙',
+  '다섯 번째 추천 트랙',
+]
+const YOUTUBE_IFRAME_API_URL = 'https://www.youtube.com/iframe_api'
+const YOUTUBE_PLAYER_ELEMENT_ID = 'youtube-player-anchor'
+
+const getYoutubeVideoId = (url: string) => {
+  try {
+    const youtubeUrl = new URL(url)
+    if (youtubeUrl.hostname === 'youtu.be') {
+      return youtubeUrl.pathname.replace('/', '') || null
+    }
+
+    return youtubeUrl.searchParams.get('v')
+  } catch {
+    return null
+  }
+}
+
+const formatTime = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return '0:00'
+  }
+
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+}
 
 function App() {
   const trackRailRef = useRef<HTMLDivElement>(null)
   const playlistRailRef = useRef<HTMLDivElement>(null)
+  const youtubePlayerRef = useRef<YouTubePlayer | null>(null)
+  const progressTimerRef = useRef<number | null>(null)
+  const playlistTrackScrollRef = useRef<HTMLDivElement>(null)
+  const playlistTrackItemRefs = useRef<Array<HTMLLIElement | null>>([])
   const cardPressStartX = useRef(0)
   const ignoreClickAfterDrag = useRef(false)
+  const playlistDragState = useRef({
+    isDragging: false,
+    lastTime: 0,
+    lastY: 0,
+    startY: 0,
+    scrollTop: 0,
+    velocity: 0,
+  })
   const dragState = useRef({
     isDragging: false,
     lastTime: 0,
@@ -41,8 +132,13 @@ function App() {
   const [selectedTab, setSelectedTab] = useState<RecommendationTab>('track')
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
+  const [currentPlaylistTrackIndex, setCurrentPlaylistTrackIndex] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isPlayerActive, setIsPlayerActive] = useState(false)
+  const [isYoutubeApiReady, setIsYoutubeApiReady] = useState(() => Boolean(window.YT?.Player))
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
   const isResultView = Boolean(analysisResult)
   const recommendedTracks = analysisResult?.recommended_tracks ?? []
   const recommendedPlaylists = analysisResult?.recommended_playlists ?? []
@@ -51,10 +147,145 @@ function App() {
   const activePlaylist =
     recommendedPlaylists.find((playlist) => playlist.id === selectedPlaylistId) ?? recommendedPlaylists[0]
   const activeRecommendation = selectedTab === 'track' ? activeTrack : activePlaylist
+  const activeVideoId = activeTrack
+    ? getYoutubeVideoId(activeTrack.url) ?? (activeTrack.id.startsWith('track-') ? null : activeTrack.id)
+    : null
+  const activePlaylistId = activePlaylist?.id ?? null
+  const progressPercent = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0
+  const playlistTrackTitles = activePlaylist?.playlist_tracks ?? []
+  const playlistTrackItems = playlistTrackTitles.length ? playlistTrackTitles : samplePlaylistTracks
+  const activePlaylistTrackIndex = playlistTrackItems.length
+    ? Math.min(currentPlaylistTrackIndex, playlistTrackItems.length - 1)
+    : 0
+  const activePlaylistTrackTitle = playlistTrackItems[activePlaylistTrackIndex] ?? playlistTrackItems[0] ?? ''
   const moodHighlights = [
     ...(analysisResult?.emotions ?? []),
     ...(analysisResult?.mood_tags ?? []),
   ].slice(0, 4)
+
+  useEffect(() => {
+    playlistTrackItemRefs.current = playlistTrackItemRefs.current.slice(0, playlistTrackItems.length)
+    if (selectedTab !== 'playlist') {
+      return
+    }
+
+    const activeItem = playlistTrackItemRefs.current[activePlaylistTrackIndex]
+    if (!activeItem) {
+      return
+    }
+
+    activeItem.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }, [activePlaylistTrackIndex, playlistTrackItems.length, selectedTab])
+
+  useEffect(() => {
+    if (window.YT?.Player) {
+      return
+    }
+
+    const previousReadyHandler = window.onYouTubeIframeAPIReady
+    window.onYouTubeIframeAPIReady = () => {
+      previousReadyHandler?.()
+      setIsYoutubeApiReady(true)
+    }
+
+    if (!document.querySelector(`script[src="${YOUTUBE_IFRAME_API_URL}"]`)) {
+      const script = document.createElement('script')
+      script.src = YOUTUBE_IFRAME_API_URL
+      script.async = true
+      document.body.appendChild(script)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isResultView || !isYoutubeApiReady || !window.YT?.Player) {
+      return
+    }
+
+    if (!youtubePlayerRef.current) {
+      youtubePlayerRef.current = new window.YT.Player(YOUTUBE_PLAYER_ELEMENT_ID, {
+        height: '1',
+        width: '1',
+        videoId: activeVideoId ?? undefined,
+        playerVars: {
+          autoplay: 0,
+          playsinline: 1,
+        },
+        events: {
+          onStateChange: (event) => {
+            if (event.data === window.YT?.PlayerState.PLAYING) {
+              setIsPlayerActive(true)
+              if (selectedTab === 'playlist') {
+                const nextIndex = youtubePlayerRef.current?.getPlaylistIndex()
+                if (typeof nextIndex === 'number' && nextIndex >= 0) {
+                  setCurrentPlaylistTrackIndex(nextIndex)
+                }
+              }
+              return
+            }
+
+            if (
+              event.data === window.YT?.PlayerState.PAUSED ||
+              event.data === window.YT?.PlayerState.ENDED
+            ) {
+              setIsPlayerActive(false)
+            }
+          },
+        },
+      })
+      return
+    }
+
+    if (selectedTab === 'playlist' && activePlaylistId) {
+      youtubePlayerRef.current.loadPlaylist({
+        list: activePlaylistId,
+        listType: 'playlist',
+        index: 0,
+        startSeconds: 0,
+      })
+      return
+    }
+
+    if (selectedTab === 'track' && activeVideoId) {
+      youtubePlayerRef.current.loadVideoById(activeVideoId)
+    }
+  }, [activePlaylistId, activeVideoId, isResultView, isYoutubeApiReady, selectedTab])
+
+  useEffect(() => {
+    if (progressTimerRef.current) {
+      window.clearInterval(progressTimerRef.current)
+      progressTimerRef.current = null
+    }
+
+    if (!isPlayerActive || !youtubePlayerRef.current) {
+      return
+    }
+
+    progressTimerRef.current = window.setInterval(() => {
+      const player = youtubePlayerRef.current
+      if (!player) {
+        return
+      }
+
+      setCurrentTime(player.getCurrentTime())
+      setDuration(player.getDuration())
+      if (selectedTab === 'playlist') {
+        const nextIndex = player.getPlaylistIndex()
+        if (typeof nextIndex === 'number' && nextIndex >= 0) {
+          setCurrentPlaylistTrackIndex(nextIndex)
+        }
+      }
+    }, 500)
+
+    return () => {
+      if (progressTimerRef.current) {
+        window.clearInterval(progressTimerRef.current)
+        progressTimerRef.current = null
+      }
+    }
+  }, [isPlayerActive, selectedTab])
 
   const analyzeMoodText = async (text: string) => {
     const trimmedText = text.trim()
@@ -82,7 +313,11 @@ function App() {
       setAnalysisResult(result)
       setSelectedTrackId(result.recommended_tracks[0]?.id ?? null)
       setSelectedPlaylistId(result.recommended_playlists[0]?.id ?? null)
-      setInputText(trimmedText)
+      setCurrentPlaylistTrackIndex(0)
+      setIsPlayerActive(false)
+      setCurrentTime(0)
+      setDuration(0)
+      setInputText('')
     } catch {
       setErrorMessage('분석 결과를 불러오지 못했습니다. 백엔드 서버를 확인해 주세요.')
     } finally {
@@ -129,6 +364,67 @@ function App() {
     rail.scrollLeft = dragState.current.scrollLeft - distance
   }
 
+  const startPlaylistDrag = (event: React.PointerEvent<HTMLDivElement>, rail: HTMLDivElement | null) => {
+    if (!rail) {
+      return
+    }
+
+    playlistDragState.current = {
+      isDragging: true,
+      lastTime: performance.now(),
+      lastY: event.clientY,
+      startY: event.clientY,
+      scrollTop: rail.scrollTop,
+      velocity: 0,
+    }
+  }
+
+  const movePlaylistDrag = (event: React.PointerEvent<HTMLDivElement>, rail: HTMLDivElement | null) => {
+    if (!playlistDragState.current.isDragging || !rail) {
+      return
+    }
+
+    event.preventDefault()
+    const distance = event.clientY - playlistDragState.current.startY
+
+    const now = performance.now()
+    const timeDelta = now - playlistDragState.current.lastTime
+    if (timeDelta > 0) {
+      playlistDragState.current.velocity = (event.clientY - playlistDragState.current.lastY) / timeDelta
+      playlistDragState.current.lastTime = now
+      playlistDragState.current.lastY = event.clientY
+    }
+
+    rail.scrollTop = playlistDragState.current.scrollTop - distance
+  }
+
+  const stopPlaylistDrag = (
+    event?: React.PointerEvent<HTMLDivElement>,
+    rail?: HTMLDivElement | null,
+  ) => {
+    const draggedDistance = Math.abs(
+      (event?.clientY ?? playlistDragState.current.lastY) - playlistDragState.current.startY,
+    )
+    playlistDragState.current.isDragging = false
+
+    if (!rail || draggedDistance < 12) {
+      return
+    }
+
+    let velocity = playlistDragState.current.velocity * -18
+    const glide = () => {
+      if (Math.abs(velocity) < 0.2) {
+        return
+      }
+
+      rail.scrollTop += velocity
+      velocity *= 0.88
+      requestAnimationFrame(glide)
+    }
+
+    requestAnimationFrame(glide)
+  }
+
   const stopDrag = (event?: React.PointerEvent<HTMLDivElement>, rail?: HTMLDivElement | null) => {
     const draggedDistance = Math.abs(
       (event?.clientX ?? dragState.current.lastX) - dragState.current.startX,
@@ -162,10 +458,15 @@ function App() {
 
   const selectTrack = (trackId: string) => {
     setSelectedTrackId(trackId)
+    setCurrentTime(0)
+    setDuration(0)
   }
 
   const selectPlaylist = (playlistId: string) => {
     setSelectedPlaylistId(playlistId)
+    setCurrentPlaylistTrackIndex(0)
+    setCurrentTime(0)
+    setDuration(0)
   }
 
   const rememberCardPressStart = (event: React.PointerEvent<HTMLElement>) => {
@@ -196,6 +497,92 @@ function App() {
     if (!ignoreClickAfterDrag.current) {
       selectPlaylist(playlistId)
     }
+  }
+
+  const selectTrackByOffset = (offset: number) => {
+    if (!recommendedTracks.length) {
+      return
+    }
+
+    const currentIndex = activeTrack
+      ? recommendedTracks.findIndex((track) => track.id === activeTrack.id)
+      : 0
+    const nextIndex = (currentIndex + offset + recommendedTracks.length) % recommendedTracks.length
+
+    setSelectedTab('track')
+    setSelectedTrackId(recommendedTracks[nextIndex].id)
+    setCurrentTime(0)
+    setDuration(0)
+  }
+
+  const stepPlaylistTrack = (direction: 'previous' | 'next') => {
+    const player = youtubePlayerRef.current
+    if (!player || !activePlaylistId) {
+      return
+    }
+
+    if (!isPlayerActive) {
+      player.loadPlaylist({
+        list: activePlaylistId,
+        listType: 'playlist',
+        index: 0,
+        startSeconds: 0,
+      })
+      player.playVideo()
+      setIsPlayerActive(true)
+      setCurrentPlaylistTrackIndex(0)
+      return
+    }
+
+    if (direction === 'previous') {
+      player.previousVideo()
+    } else {
+      player.nextVideo()
+    }
+
+    window.setTimeout(() => {
+      const nextIndex = player.getPlaylistIndex?.()
+      if (typeof nextIndex === 'number' && nextIndex >= 0) {
+        setCurrentPlaylistTrackIndex(nextIndex)
+      }
+    }, 0)
+  }
+
+  const togglePlayer = () => {
+    const player = youtubePlayerRef.current
+    if (!player) {
+      return
+    }
+
+    if (isPlayerActive) {
+      player.pauseVideo()
+      setIsPlayerActive(false)
+      return
+    }
+
+    if (selectedTab === 'playlist') {
+      if (!activePlaylistId) {
+        return
+      }
+
+      player.loadPlaylist({
+        list: activePlaylistId,
+        listType: 'playlist',
+        index: 0,
+        startSeconds: 0,
+      })
+      player.playVideo()
+      setIsPlayerActive(true)
+      setCurrentPlaylistTrackIndex(0)
+      return
+    }
+
+    if (!activeVideoId) {
+      return
+    }
+
+    player.playVideo()
+    setIsPlayerActive(true)
   }
 
   return (
@@ -248,6 +635,38 @@ function App() {
                 플레이리스트
               </button>
             </nav>
+
+            <div className="sidebar-player-controls">
+              <button
+                type="button"
+                onClick={() =>
+                  selectedTab === 'playlist' ? stepPlaylistTrack('previous') : selectTrackByOffset(-1)
+                }
+                aria-label={selectedTab === 'playlist' ? '플레이리스트 이전 곡' : '이전 추천 곡'}
+              >
+                ⏮
+              </button>
+              <button
+                type="button"
+                className="player-main-button"
+                onClick={togglePlayer}
+                disabled={
+                  (selectedTab === 'track' ? !activeVideoId : !activePlaylistId) || !isYoutubeApiReady
+                }
+                aria-label={isPlayerActive ? '재생 중지' : selectedTab === 'track' ? '선택한 곡 재생' : '선택한 플레이리스트 재생'}
+              >
+                {isPlayerActive ? '⏸' : '▶'}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  selectedTab === 'playlist' ? stepPlaylistTrack('next') : selectTrackByOffset(1)
+                }
+                aria-label={selectedTab === 'playlist' ? '플레이리스트 다음 곡' : '다음 추천 곡'}
+              >
+                ⏭
+              </button>
+            </div>
           </aside>
 
           <section className="dashboard-main">
@@ -257,7 +676,7 @@ function App() {
                 id="result-mood-search"
                 value={inputText}
                 onChange={(event) => setInputText(event.target.value)}
-                placeholder="지금 감정이나 상황을 다시 입력하세요"
+                placeholder="현재의 기분을 입력해주세요"
               />
               <button type="submit" disabled={!inputText.trim() || isLoading}>
                 {isLoading ? '분석 중' : 'Search'}
@@ -343,21 +762,44 @@ function App() {
                     <img src={activeRecommendation.thumbnail_url} alt="" className="selected-track-image" />
                   )}
                   <div>
-                    <p className="card-type">{selectedTab === 'track' ? 'Selected track' : 'Selected playlist'}</p>
-                    <h3>{activeRecommendation?.title}</h3>
+                    {selectedTab === 'track' && <p className="card-type">Selected track</p>}
+                    <a
+                      href={activeRecommendation?.url}
+                      className="selected-track-title-link"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <h3>{activeRecommendation?.title}</h3>
+                    </a>
                     <p className="channel-name">{activeRecommendation?.channel_title}</p>
                     {selectedTab === 'track' ? (
                       <p>{activeRecommendation?.reason}</p>
                     ) : (
-                      <ol className="sample-track-list">
-                        {samplePlaylistTracks.map((track) => (
-                          <li key={track}>{track}</li>
-                        ))}
-                      </ol>
+                      <div
+                        className="playlist-track-scroll draggable-rail vertical-rail"
+                        ref={playlistTrackScrollRef}
+                        onPointerCancel={(event) => stopPlaylistDrag(event, playlistTrackScrollRef.current)}
+                        onPointerDown={(event) => startPlaylistDrag(event, playlistTrackScrollRef.current)}
+                        onPointerLeave={(event) => stopPlaylistDrag(event, playlistTrackScrollRef.current)}
+                        onPointerMove={(event) => movePlaylistDrag(event, playlistTrackScrollRef.current)}
+                        onPointerUp={(event) => stopPlaylistDrag(event, playlistTrackScrollRef.current)}
+                      >
+                        <ol className="sample-track-list playlist-track-list">
+                          {playlistTrackItems.map((track, index) => (
+                            <li
+                              key={`${activeRecommendation?.id ?? 'playlist'}-${index}-${track}`}
+                              className={index === activePlaylistTrackIndex ? 'active' : ''}
+                              ref={(node) => {
+                                playlistTrackItemRefs.current[index] = node
+                              }}
+                            >
+                              <span className="playlist-track-number">{index + 1}</span>
+                              <span className="playlist-track-title">{track}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
                     )}
-                    <a href={activeRecommendation?.url} className="youtube-link" target="_blank" rel="noreferrer">
-                      YouTube에서 열기
-                    </a>
                   </div>
                 </article>
               </section>
@@ -371,13 +813,37 @@ function App() {
               </section>
             </div>
 
-            <footer className="player-bar">
-              <span className="play-button">▶</span>
-              {activeRecommendation?.thumbnail_url && <img src={activeRecommendation.thumbnail_url} alt="" />}
-              <div>
-                <p>{activeRecommendation?.title}</p>
-                <span>{activeRecommendation?.channel_title}</span>
+            <footer className="player-bar" aria-label="YouTube player">
+              <div id={YOUTUBE_PLAYER_ELEMENT_ID} className="youtube-audio-frame" />
+              <div className="player-volume" aria-hidden="true">
+                🔊
               </div>
+
+              <div className="player-track-info">
+                {selectedTab === 'playlist' ? (
+                  <div className="player-track-copy">
+                    <p>{activePlaylistTrackTitle || activeRecommendation?.title}</p>
+                    <span>{activeRecommendation?.title}</span>
+                  </div>
+                ) : (
+                  <>
+                    {activeRecommendation?.thumbnail_url && <img src={activeRecommendation.thumbnail_url} alt="" />}
+                    <div>
+                      <p>{activeRecommendation?.title}</p>
+                      <span>{activeRecommendation?.channel_title}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="player-progress" aria-hidden="true">
+                <span>{formatTime(currentTime)}</span>
+                <div>
+                  <i style={{ width: `${progressPercent}%` }} />
+                </div>
+                <span>{formatTime(duration)}</span>
+              </div>
+
               <a href={activeRecommendation?.url} target="_blank" rel="noreferrer">
                 YouTube
               </a>

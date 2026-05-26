@@ -12,6 +12,7 @@ class RecommendationItem(BaseModel):
     url: str
     thumbnail_url: str
     reason: str
+    playlist_tracks: list[str] = Field(default_factory=list)
 
 
 class AnalyzeResponse(BaseModel):
