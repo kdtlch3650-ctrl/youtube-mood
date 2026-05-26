@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -24,16 +26,22 @@ def health_check() -> dict[str, str]:
 
 @app.post("/api/analyze")
 def analyze_text(request: AnalyzeRequest) -> AnalyzeResponse:
-    # AI 결과를 먼저 만들고, 그 결과를 바탕으로 YouTube 추천 데이터를 생성한다.
+    # AI 결과를 먼저 만든 뒤, 서로 독립적인 YouTube 검색은 동시에 실행한다.
     analysis = predict_analysis(request.text)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        tracks_future = executor.submit(get_recommended_tracks, analysis.search_keywords)
+        playlists_future = executor.submit(get_recommended_playlists, analysis.search_keywords)
+        recommended_tracks = tracks_future.result()
+        recommended_playlists = playlists_future.result()
 
     return AnalyzeResponse(
         input_text=analysis.input_text,
         emotions=analysis.emotions,
         mood_tags=analysis.mood_tags,
         search_keywords=analysis.search_keywords,
-        recommended_tracks=get_recommended_tracks(analysis.search_keywords),
-        recommended_playlists=get_recommended_playlists(analysis.search_keywords),
+        recommended_tracks=recommended_tracks,
+        recommended_playlists=recommended_playlists,
     )
 
 
