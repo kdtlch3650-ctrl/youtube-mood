@@ -56,10 +56,8 @@ function App() {
     ...(analysisResult?.mood_tags ?? []),
   ].slice(0, 4)
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    const trimmedText = inputText.trim()
+  const analyzeMoodText = async (text: string) => {
+    const trimmedText = text.trim()
     if (!trimmedText) {
       return
     }
@@ -84,6 +82,7 @@ function App() {
       setAnalysisResult(result)
       setSelectedTrackId(result.recommended_tracks[0]?.id ?? null)
       setSelectedPlaylistId(result.recommended_playlists[0]?.id ?? null)
+      setInputText(trimmedText)
     } catch {
       setErrorMessage('분석 결과를 불러오지 못했습니다. 백엔드 서버를 확인해 주세요.')
     } finally {
@@ -91,12 +90,9 @@ function App() {
     }
   }
 
-  const handleReset = () => {
-    setAnalysisResult(null)
-    setErrorMessage('')
-    setSelectedTab('track')
-    setSelectedTrackId(null)
-    setSelectedPlaylistId(null)
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    void analyzeMoodText(inputText)
   }
 
   const startDrag = (event: React.PointerEvent<HTMLDivElement>, rail: HTMLDivElement | null) => {
@@ -252,12 +248,22 @@ function App() {
                 플레이리스트
               </button>
             </nav>
-            <button type="button" className="reset-link" onClick={handleReset}>
-              다시 입력하기
-            </button>
           </aside>
 
           <section className="dashboard-main">
+            <form className="result-search-form" onSubmit={handleSubmit}>
+              <label htmlFor="result-mood-search">Search music</label>
+              <input
+                id="result-mood-search"
+                value={inputText}
+                onChange={(event) => setInputText(event.target.value)}
+                placeholder="지금 감정이나 상황을 다시 입력하세요"
+              />
+              <button type="submit" disabled={!inputText.trim() || isLoading}>
+                {isLoading ? '분석 중' : 'Search'}
+              </button>
+            </form>
+
             <section className="recommendation-area" aria-label="추천 음악 결과">
               <h1 id="result-title">{selectedTab === 'track' ? 'Explore new' : 'Playlists'}</h1>
               {selectedTab === 'track' ? (
