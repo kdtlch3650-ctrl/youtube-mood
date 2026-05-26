@@ -18,6 +18,7 @@
 ```text
 ml/
   README.md
+  data-labeling-guide.md
   train.py
   data/
     sample_training_data.jsonl
@@ -34,6 +35,8 @@ ml/
 ```json
 {"text":"지쳤지만 너무 무거운 음악은 싫고 조금 차분한 분위기가 좋다","emotions":["tired","calm"],"mood_tags":["soft","quiet"]}
 ```
+
+감정 태그와 분위기 태그를 붙이는 기준은 `data-labeling-guide.md`에 정리한다.
 
 ## 4. 앞으로 추가할 파일
 
