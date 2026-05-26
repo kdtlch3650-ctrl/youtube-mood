@@ -57,7 +57,7 @@ def convert_youtube_item(item: dict, result_type: str, reason: str) -> Recommend
 
 def get_recommended_tracks(search_keywords: list[str]) -> list[RecommendationItem]:
     keyword = search_keywords[0] if search_keywords else "calm warm music"
-    items = search_youtube(f"{keyword} music", "video", 5)
+    items = search_youtube(f"{keyword} music", "video", 10)
 
     # 검색 결과가 없으면 화면 확인이 가능하도록 임시 추천 곡 목록을 반환한다.
     if not items:
@@ -75,7 +75,7 @@ def get_recommended_tracks(search_keywords: list[str]) -> list[RecommendationIte
 
 def get_recommended_playlists(search_keywords: list[str]) -> list[RecommendationItem]:
     keyword = search_keywords[0] if search_keywords else "calm warm music"
-    items = search_youtube(f"{keyword} playlist", "playlist", 3)
+    items = search_youtube(f"{keyword} playlist", "playlist", 10)
 
     # 검색 결과가 없으면 화면 확인이 가능하도록 임시 플레이리스트를 반환한다.
     if not items:
@@ -125,6 +125,54 @@ def get_mock_recommended_tracks() -> list[RecommendationItem]:
             thumbnail_url="",
             reason="집중과 휴식 사이의 분위기를 유지하기 좋은 곡입니다.",
         ),
+        RecommendationItem(
+            id="track-5",
+            title="Slow Morning Air",
+            channel_title="Quiet Floor",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="느리게 기분을 정리하고 싶을 때 어울리는 곡입니다.",
+        ),
+        RecommendationItem(
+            id="track-6",
+            title="Muted City Lights",
+            channel_title="After Hours",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="도시적인 밤 분위기와 차분함을 함께 느끼기 좋은 곡입니다.",
+        ),
+        RecommendationItem(
+            id="track-7",
+            title="Gentle Reset",
+            channel_title="Mood Lab",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="무거운 감정을 조금 덜어내는 데 어울리는 곡입니다.",
+        ),
+        RecommendationItem(
+            id="track-8",
+            title="Soft Pulse",
+            channel_title="Blue Window",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="잔잔하지만 너무 처지지 않는 리듬을 가진 곡입니다.",
+        ),
+        RecommendationItem(
+            id="track-9",
+            title="Clouded Mind",
+            channel_title="Room Tone",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="복잡한 생각을 정리하며 듣기 좋은 분위기의 곡입니다.",
+        ),
+        RecommendationItem(
+            id="track-10",
+            title="Warm Exit",
+            channel_title="Late Studio",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="하루를 부드럽게 마무리하기 좋은 곡입니다.",
+        ),
     ]
 
 
@@ -153,5 +201,61 @@ def get_mock_recommended_playlists() -> list[RecommendationItem]:
             url="https://www.youtube.com/",
             thumbnail_url="",
             reason="밤에 듣기 좋은 부드러운 곡 중심으로 이어지는 플레이리스트입니다.",
+        ),
+        RecommendationItem(
+            id="playlist-4",
+            title="Soft focus rotation",
+            channel_title="Calm Desk",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="차분하게 집중을 이어가기 좋은 플레이리스트입니다.",
+        ),
+        RecommendationItem(
+            id="playlist-5",
+            title="Not too sad night mix",
+            channel_title="Night Archive",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="너무 무겁지 않은 밤 분위기의 플레이리스트입니다.",
+        ),
+        RecommendationItem(
+            id="playlist-6",
+            title="Gentle mood reset",
+            channel_title="Mood Room",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="감정을 천천히 정리하기 좋은 곡들로 구성된 플레이리스트입니다.",
+        ),
+        RecommendationItem(
+            id="playlist-7",
+            title="Warm indie background",
+            channel_title="Indie Shelf",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="따뜻한 배경음악처럼 듣기 좋은 플레이리스트입니다.",
+        ),
+        RecommendationItem(
+            id="playlist-8",
+            title="Low energy comfort",
+            channel_title="Soft Channel",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="에너지가 낮은 날 부담 없이 듣기 좋은 플레이리스트입니다.",
+        ),
+        RecommendationItem(
+            id="playlist-9",
+            title="Late walk playlist",
+            channel_title="Street Light",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="밤 산책 같은 분위기에 어울리는 플레이리스트입니다.",
+        ),
+        RecommendationItem(
+            id="playlist-10",
+            title="Calm electronic selection",
+            channel_title="Electronic Mood",
+            url="https://www.youtube.com/",
+            thumbnail_url="",
+            reason="잔잔한 전자음악 중심으로 이어지는 플레이리스트입니다.",
         ),
     ]

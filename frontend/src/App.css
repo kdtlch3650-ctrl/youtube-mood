@@ -148,8 +148,13 @@
 .dashboard-main {
   display: grid;
   gap: 26px;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto auto;
+  min-width: 0;
   padding: 30px 42px 0;
+}
+
+.recommendation-area {
+  min-width: 0;
 }
 
 .detail-grid {
@@ -157,14 +162,15 @@
   display: grid;
   gap: 34px;
   grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
-  min-height: 340px;
+  min-height: 0;
 }
 
 .selected-track-section,
 .mood-panel {
   display: grid;
   grid-template-rows: auto 1fr;
-  height: 380px;
+  height: 340px;
+  min-height: 0;
 }
 
 .recommendation-area h1,
@@ -177,9 +183,48 @@
 .track-grid {
   display: flex;
   gap: 22px;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   padding: 0 18px 8px 0;
-  scroll-snap-type: x mandatory;
+}
+
+.playlist-card-grid {
+  display: flex;
+  gap: 22px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 0 18px 8px 0;
+}
+
+.draggable-rail {
+  cursor: grab;
+  scrollbar-color: rgba(255, 255, 255, 0.26) transparent;
+  scrollbar-width: thin;
+  touch-action: pan-x;
+  user-select: none;
+}
+
+.draggable-rail:active {
+  cursor: grabbing;
+}
+
+.draggable-rail::-webkit-scrollbar {
+  height: 6px;
+}
+
+.draggable-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.draggable-rail::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+
+.draggable-rail::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.34);
 }
 
 .track-card {
@@ -193,25 +238,55 @@
   gap: 8px;
   grid-template-rows: auto 40px 18px;
   padding: 12px;
-  scroll-snap-align: start;
   text-align: left;
-  width: 152px;
-  flex: 0 0 152px;
+  width: 180px;
+  flex: 0 0 180px;
 }
 
-.track-card.active {
+.playlist-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  flex: 0 0 180px;
+  font: inherit;
+  gap: 8px;
+  grid-template-rows: auto 40px 18px;
+  padding: 12px;
+  text-align: left;
+  width: 180px;
+}
+
+.track-card.active,
+.playlist-card.active {
   border-color: var(--accent);
   box-shadow: 0 18px 34px rgba(67, 84, 255, 0.18);
 }
 
-.track-card img {
+.track-card img,
+.playlist-card img,
+.playlist-fallback {
   aspect-ratio: 1;
   border-radius: 12px;
   object-fit: cover;
+  pointer-events: none;
   width: 100%;
 }
 
-.track-card h3 {
+.playlist-fallback {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  display: flex;
+  font-size: 28px;
+  font-weight: 900;
+  justify-content: center;
+}
+
+.track-card h3,
+.playlist-card h3 {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   display: -webkit-box;
@@ -221,7 +296,8 @@
   overflow: hidden;
 }
 
-.track-card p {
+.track-card p,
+.playlist-card p {
   color: var(--muted);
   font-size: 13px;
   margin: 0;
@@ -237,7 +313,9 @@
   display: grid;
   gap: 22px;
   grid-template-columns: minmax(180px, 260px) 1fr;
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
   padding: 18px;
 }
 
@@ -269,6 +347,20 @@
   overflow: hidden;
 }
 
+.sample-track-list {
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.sample-track-list li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .card-type {
   color: var(--accent);
   font-size: 13px;
@@ -298,54 +390,11 @@
   width: fit-content;
 }
 
-.playlist-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.playlist-row {
-  align-items: center;
-  background: var(--panel);
-  border: 1px solid transparent;
-  border-radius: 12px;
-  display: grid;
-  gap: 14px;
-  grid-template-columns: 52px 1fr auto;
-  padding: 10px 14px;
-}
-
-.playlist-row:hover {
-  border-color: var(--line);
-}
-
-.playlist-row h3 {
-  font-size: 16px;
-  margin: 0 0 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.playlist-row p {
-  color: var(--muted);
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.row-thumbnail,
 .player-bar img {
   aspect-ratio: 1;
   border-radius: 8px;
   object-fit: cover;
   width: 52px;
-}
-
-.row-index {
-  color: var(--muted);
-  font-weight: 800;
-  text-align: center;
 }
 
 .row-link {
@@ -483,10 +532,6 @@
   .player-bar {
     align-items: start;
     grid-template-columns: 1fr;
-  }
-
-  .playlist-row {
-    grid-template-columns: 44px 1fr;
   }
 
   .row-link {

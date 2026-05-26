@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import './App.css'
 
 type AnalyzeResult = {
@@ -21,17 +21,36 @@ type RecommendationItem = {
   reason: string
 }
 
+const samplePlaylistTracks = ['첫 번째 추천 트랙', '두 번째 추천 트랙', '세 번째 추천 트랙']
+
 function App() {
+  const trackRailRef = useRef<HTMLDivElement>(null)
+  const playlistRailRef = useRef<HTMLDivElement>(null)
+  const cardPressStartX = useRef(0)
+  const ignoreClickAfterDrag = useRef(false)
+  const dragState = useRef({
+    isDragging: false,
+    lastTime: 0,
+    lastX: 0,
+    startX: 0,
+    scrollLeft: 0,
+    velocity: 0,
+  })
   const [inputText, setInputText] = useState('')
   const [analysisResult, setAnalysisResult] = useState<AnalyzeResult | null>(null)
   const [selectedTab, setSelectedTab] = useState<RecommendationTab>('track')
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const isResultView = Boolean(analysisResult)
   const recommendedTracks = analysisResult?.recommended_tracks ?? []
+  const recommendedPlaylists = analysisResult?.recommended_playlists ?? []
   const activeTrack =
     recommendedTracks.find((track) => track.id === selectedTrackId) ?? recommendedTracks[0]
+  const activePlaylist =
+    recommendedPlaylists.find((playlist) => playlist.id === selectedPlaylistId) ?? recommendedPlaylists[0]
+  const activeRecommendation = selectedTab === 'track' ? activeTrack : activePlaylist
   const moodHighlights = [
     ...(analysisResult?.emotions ?? []),
     ...(analysisResult?.mood_tags ?? []),
@@ -64,6 +83,7 @@ function App() {
       const result: AnalyzeResult = await response.json()
       setAnalysisResult(result)
       setSelectedTrackId(result.recommended_tracks[0]?.id ?? null)
+      setSelectedPlaylistId(result.recommended_playlists[0]?.id ?? null)
     } catch {
       setErrorMessage('분석 결과를 불러오지 못했습니다. 백엔드 서버를 확인해 주세요.')
     } finally {
@@ -76,6 +96,110 @@ function App() {
     setErrorMessage('')
     setSelectedTab('track')
     setSelectedTrackId(null)
+    setSelectedPlaylistId(null)
+  }
+
+  const startDrag = (event: React.PointerEvent<HTMLDivElement>, rail: HTMLDivElement | null) => {
+    if (!rail) {
+      return
+    }
+
+    dragState.current = {
+      isDragging: true,
+      lastTime: performance.now(),
+      lastX: event.clientX,
+      startX: event.clientX,
+      scrollLeft: rail.scrollLeft,
+      velocity: 0,
+    }
+  }
+
+  const moveDrag = (event: React.PointerEvent<HTMLDivElement>, rail: HTMLDivElement | null) => {
+    if (!dragState.current.isDragging || !rail) {
+      return
+    }
+
+    event.preventDefault()
+    const distance = event.clientX - dragState.current.startX
+
+    const now = performance.now()
+    const timeDelta = now - dragState.current.lastTime
+    if (timeDelta > 0) {
+      dragState.current.velocity = (event.clientX - dragState.current.lastX) / timeDelta
+      dragState.current.lastTime = now
+      dragState.current.lastX = event.clientX
+    }
+
+    rail.scrollLeft = dragState.current.scrollLeft - distance
+  }
+
+  const stopDrag = (event?: React.PointerEvent<HTMLDivElement>, rail?: HTMLDivElement | null) => {
+    const draggedDistance = Math.abs(
+      (event?.clientX ?? dragState.current.lastX) - dragState.current.startX,
+    )
+    dragState.current.isDragging = false
+
+    if (draggedDistance >= 12) {
+      ignoreClickAfterDrag.current = true
+      window.setTimeout(() => {
+        ignoreClickAfterDrag.current = false
+      }, 0)
+    }
+
+    if (!rail || draggedDistance < 12) {
+      return
+    }
+
+    let velocity = dragState.current.velocity * -18
+    const glide = () => {
+      if (Math.abs(velocity) < 0.2) {
+        return
+      }
+
+      rail.scrollLeft += velocity
+      velocity *= 0.88
+      requestAnimationFrame(glide)
+    }
+
+    requestAnimationFrame(glide)
+  }
+
+  const selectTrack = (trackId: string) => {
+    setSelectedTrackId(trackId)
+  }
+
+  const selectPlaylist = (playlistId: string) => {
+    setSelectedPlaylistId(playlistId)
+  }
+
+  const rememberCardPressStart = (event: React.PointerEvent<HTMLElement>) => {
+    cardPressStartX.current = event.clientX
+  }
+
+  const selectTrackOnPointerUp = (event: React.PointerEvent<HTMLElement>, trackId: string) => {
+    const movedDistance = Math.abs(event.clientX - cardPressStartX.current)
+    if (movedDistance < 12) {
+      selectTrack(trackId)
+    }
+  }
+
+  const selectPlaylistOnPointerUp = (event: React.PointerEvent<HTMLElement>, playlistId: string) => {
+    const movedDistance = Math.abs(event.clientX - cardPressStartX.current)
+    if (movedDistance < 12) {
+      selectPlaylist(playlistId)
+    }
+  }
+
+  const selectTrackOnClick = (trackId: string) => {
+    if (!ignoreClickAfterDrag.current) {
+      selectTrack(trackId)
+    }
+  }
+
+  const selectPlaylistOnClick = (playlistId: string) => {
+    if (!ignoreClickAfterDrag.current) {
+      selectPlaylist(playlistId)
+    }
   }
 
   return (
@@ -137,37 +261,69 @@ function App() {
             <section className="recommendation-area" aria-label="추천 음악 결과">
               <h1 id="result-title">{selectedTab === 'track' ? 'Explore new' : 'Playlists'}</h1>
               {selectedTab === 'track' ? (
-                <div className="track-grid">
+                <div
+                  className="track-grid draggable-rail"
+                  ref={trackRailRef}
+                  onPointerCancel={(event) => stopDrag(event, trackRailRef.current)}
+                  onPointerDown={(event) => startDrag(event, trackRailRef.current)}
+                  onPointerLeave={(event) => stopDrag(event, trackRailRef.current)}
+                  onPointerMove={(event) => moveDrag(event, trackRailRef.current)}
+                  onPointerUp={(event) => stopDrag(event, trackRailRef.current)}
+                >
                   {recommendedTracks.map((track) => (
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       className={`track-card ${activeTrack?.id === track.id ? 'active' : ''}`}
                       key={track.id}
-                      onClick={() => setSelectedTrackId(track.id)}
+                      onClick={() => selectTrackOnClick(track.id)}
+                      onPointerDown={rememberCardPressStart}
+                      onPointerUp={(event) => selectTrackOnPointerUp(event, track.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          selectTrack(track.id)
+                        }
+                      }}
                     >
                       {track.thumbnail_url && <img src={track.thumbnail_url} alt="" />}
                       <h3>{track.title}</h3>
                       <p>{track.channel_title}</p>
-                    </button>
+                    </div>
                   ))}
                 </div>
               ) : (
-                <div className="playlist-grid">
-                  {analysisResult?.recommended_playlists.map((playlist, index) => (
-                    <article className="playlist-row" key={playlist.id}>
+                <div
+                  className="playlist-card-grid draggable-rail"
+                  ref={playlistRailRef}
+                  onPointerCancel={(event) => stopDrag(event, playlistRailRef.current)}
+                  onPointerDown={(event) => startDrag(event, playlistRailRef.current)}
+                  onPointerLeave={(event) => stopDrag(event, playlistRailRef.current)}
+                  onPointerMove={(event) => moveDrag(event, playlistRailRef.current)}
+                  onPointerUp={(event) => stopDrag(event, playlistRailRef.current)}
+                >
+                  {recommendedPlaylists.map((playlist, index) => (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className={`playlist-card ${activePlaylist?.id === playlist.id ? 'active' : ''}`}
+                      key={playlist.id}
+                      onClick={() => selectPlaylistOnClick(playlist.id)}
+                      onPointerDown={rememberCardPressStart}
+                      onPointerUp={(event) => selectPlaylistOnPointerUp(event, playlist.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          selectPlaylist(playlist.id)
+                        }
+                      }}
+                    >
                       {playlist.thumbnail_url ? (
-                        <img src={playlist.thumbnail_url} alt="" className="row-thumbnail" />
+                        <img src={playlist.thumbnail_url} alt="" />
                       ) : (
-                        <span className="row-index">{index + 1}</span>
+                        <span className="playlist-fallback">{index + 1}</span>
                       )}
-                      <div>
-                        <h3>{playlist.title}</h3>
-                        <p>{playlist.channel_title}</p>
-                      </div>
-                      <a href={playlist.url} className="row-link" target="_blank" rel="noreferrer">
-                        열기
-                      </a>
-                    </article>
+                      <h3>{playlist.title}</h3>
+                      <p>{playlist.channel_title}</p>
+                    </div>
                   ))}
                 </div>
               )}
@@ -177,15 +333,23 @@ function App() {
               <section className="selected-track-section" aria-label="선택한 대표곡">
                 <h2>Popular</h2>
                 <article className="selected-track-card">
-                  {activeTrack?.thumbnail_url && (
-                    <img src={activeTrack.thumbnail_url} alt="" className="selected-track-image" />
+                  {activeRecommendation?.thumbnail_url && (
+                    <img src={activeRecommendation.thumbnail_url} alt="" className="selected-track-image" />
                   )}
                   <div>
-                    <p className="card-type">Selected track</p>
-                    <h3>{activeTrack?.title}</h3>
-                    <p className="channel-name">{activeTrack?.channel_title}</p>
-                    <p>{activeTrack?.reason}</p>
-                    <a href={activeTrack?.url} className="youtube-link" target="_blank" rel="noreferrer">
+                    <p className="card-type">{selectedTab === 'track' ? 'Selected track' : 'Selected playlist'}</p>
+                    <h3>{activeRecommendation?.title}</h3>
+                    <p className="channel-name">{activeRecommendation?.channel_title}</p>
+                    {selectedTab === 'track' ? (
+                      <p>{activeRecommendation?.reason}</p>
+                    ) : (
+                      <ol className="sample-track-list">
+                        {samplePlaylistTracks.map((track) => (
+                          <li key={track}>{track}</li>
+                        ))}
+                      </ol>
+                    )}
+                    <a href={activeRecommendation?.url} className="youtube-link" target="_blank" rel="noreferrer">
                       YouTube에서 열기
                     </a>
                   </div>
@@ -203,12 +367,12 @@ function App() {
 
             <footer className="player-bar">
               <span className="play-button">▶</span>
-              {activeTrack?.thumbnail_url && <img src={activeTrack.thumbnail_url} alt="" />}
+              {activeRecommendation?.thumbnail_url && <img src={activeRecommendation.thumbnail_url} alt="" />}
               <div>
-                <p>{activeTrack?.title}</p>
-                <span>{activeTrack?.channel_title}</span>
+                <p>{activeRecommendation?.title}</p>
+                <span>{activeRecommendation?.channel_title}</span>
               </div>
-              <a href={activeTrack?.url} target="_blank" rel="noreferrer">
+              <a href={activeRecommendation?.url} target="_blank" rel="noreferrer">
                 YouTube
               </a>
             </footer>
