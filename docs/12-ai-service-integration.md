@@ -161,3 +161,24 @@ KOTE 라벨과 분위기 태그 매핑은 `backend/app/ai/mood_mapping.py`에서
 - 기존 규칙 기반 영어 감정 라벨
 
 이렇게 한 이유는 로컬 학습 모델을 붙이기 전에도 기존 분석 흐름이 깨지지 않게 하기 위해서다.
+
+## 11. 모델 어댑터 구현 상태
+
+KOTE 모델 어댑터는 `backend/app/ai/kote_adapter.py`에서 관리한다.
+
+현재 동작 방식:
+
+```text
+모델 파일 있음 + torch/transformers 사용 가능
+→ KoteModelAdapter 사용
+
+모델 파일 없음
+→ 기존 규칙 기반 AiModel 사용
+
+모델 파일은 있지만 의존성 없음
+→ 기존 규칙 기반 AiModel 사용
+```
+
+`load_model()`은 `lru_cache`를 사용해 첫 요청에서 선택한 모델을 재사용한다.
+
+이 구조 덕분에 백엔드 요청마다 모델 파일을 다시 읽지 않는다.

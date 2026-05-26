@@ -944,3 +944,22 @@ KOTE 감정 라벨을 기존 API 응답 구조의 `mood_tags`와 `search_keyword
 
 - 모델 연결 전에도 기존 규칙 기반 분석 흐름이 유지된다.
 - 이후 KOTE 모델이 감정 라벨만 반환해도 프론트가 사용하는 `mood_tags`와 `search_keywords`를 만들 수 있는 구조가 됐다.
+
+## 2026-05-26 KOTE 모델 어댑터 추가
+
+### 작업 목적
+
+백엔드에서 로컬 학습 모델이 있으면 KOTE 모델을 사용하고, 없으면 기존 규칙 기반 모델로 fallback하도록 한다.
+
+### 작업 내용
+
+- `backend/app/ai/kote_adapter.py`를 추가했다.
+- 로컬 모델 파일과 `labels.json`을 읽어 KOTE 감정 라벨을 예측하는 어댑터를 만들었다.
+- `load_model()`에서 모델 파일이 있으면 `KoteModelAdapter`를 사용하도록 변경했다.
+- 모델 파일이 없거나 `torch/transformers` 의존성이 없으면 기존 `AiModel`을 사용하도록 했다.
+- `lru_cache`로 모델을 한 번만 로드하도록 했다.
+- AI 서비스 연결 설계 문서에 모델 어댑터 구현 상태를 추가했다.
+
+### 확인 결과
+
+- 백엔드가 모델 파일 유무에 따라 KOTE 모델과 규칙 기반 모델을 선택할 수 있는 구조가 됐다.

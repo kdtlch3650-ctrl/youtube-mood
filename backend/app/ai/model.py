@@ -1,5 +1,7 @@
 from dataclasses import dataclass
+from functools import lru_cache
 
+from app.ai.kote_adapter import KoteModelAdapter
 from app.ai.labels import EMOTION_LABELS, MOOD_LABELS
 
 
@@ -62,7 +64,14 @@ class AiModel:
         }
 
 
-def load_model() -> AiModel:
+@lru_cache(maxsize=1)
+def load_model() -> AiModel | KoteModelAdapter:
     # 모델 로딩 로직을 한곳에 모아두면 나중에 교체하기 쉽다.
-    return AiModel()
+    if KoteModelAdapter.is_available():
+        try:
+            return KoteModelAdapter()
+        except ImportError:
+            # 학습 모델 파일은 있지만 백엔드 환경에 torch/transformers가 없으면 규칙 기반으로 대체한다.
+            return AiModel()
 
+    return AiModel()
