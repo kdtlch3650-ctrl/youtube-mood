@@ -122,7 +122,7 @@ def main() -> None:
         per_device_eval_batch_size=4,
         num_train_epochs=3,
         eval_strategy="epoch",
-        save_strategy="epoch",
+        save_strategy="no",
         logging_steps=10,
     )
 

@@ -85,6 +85,7 @@ ml/data/kote_training_data.jsonl
 - 한 문장에 여러 라벨이 붙을 수 있도록 멀티라벨 형식으로 변환한다.
 - `klue/roberta-small` 토크나이저와 모델을 불러온다.
 - 학습이 끝나면 모델과 라벨 목록을 `ml/models/mood-roberta-small/`에 저장한다.
+- 중간 체크포인트는 저장하지 않고 최종 모델만 저장한다.
 
 ## 7. 학습 의존성
 
