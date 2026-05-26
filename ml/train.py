@@ -50,8 +50,7 @@ def collect_labels(rows: list[dict]) -> list[str]:
     labels = set()
 
     for row in rows:
-        labels.update(row["emotions"])
-        labels.update(row["mood_tags"])
+        labels.update(row["labels"])
 
     return sorted(labels)
 
@@ -61,10 +60,10 @@ def encode_labels(rows: list[dict], label_names: list[str]) -> list[list[float]]
     encoded_rows = []
 
     for row in rows:
-        # 한 문장에 여러 감정과 분위기가 같이 붙을 수 있으므로 멀티라벨 배열로 만든다.
+        # 한 문장에 여러 KOTE 감정 라벨이 붙을 수 있으므로 멀티라벨 배열로 만든다.
         encoded = [0.0] * len(label_names)
 
-        for label in row["emotions"] + row["mood_tags"]:
+        for label in row["labels"]:
             encoded[label_index[label]] = 1.0
 
         encoded_rows.append(encoded)
