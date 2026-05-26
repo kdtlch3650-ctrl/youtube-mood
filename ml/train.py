@@ -12,7 +12,7 @@ from transformers import (
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / "data" / "sample_training_data.jsonl"
+DATA_PATH = BASE_DIR / "data" / "kote_training_data.jsonl"
 MODEL_NAME = "klue/roberta-small"
 OUTPUT_DIR = BASE_DIR / "models" / "mood-roberta-small"
 

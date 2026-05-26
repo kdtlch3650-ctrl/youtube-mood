@@ -12,6 +12,10 @@ __pycache__/
 venv/
 .tmp/
 
+# ML data
+ml/data/raw/*.tsv
+ml/data/kote_training_data.jsonl
+
 # Node
 node_modules/
 dist/

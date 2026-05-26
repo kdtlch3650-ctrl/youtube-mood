@@ -775,3 +775,24 @@ KOTE 원본 TSV 파일을 프로젝트 학습 스크립트가 읽을 수 있는 
 
 - KOTE 원본 파일을 직접 받으면 별도 의존성 없이 학습용 JSONL로 변환할 수 있는 구조가 됐다.
 - 원본 TSV가 없을 때는 필요한 파일 위치를 안내하는 오류가 발생하는 것을 확인했다.
+
+## 2026-05-26 KOTE 원본 데이터 다운로드 및 변환
+
+### 작업 목적
+
+KOTE 공개 데이터셋을 실제 학습에 사용할 수 있도록 로컬에 내려받고 JSONL 학습 데이터로 변환한다.
+
+### 작업 내용
+
+- KOTE `train.tsv`, `val.tsv`, `test.tsv`를 `ml/data/raw/`에 다운로드했다.
+- KOTE TSV가 헤더 없이 `id`, `text`, `labels` 순서로 구성된 것을 확인했다.
+- 숫자 라벨 인덱스를 KOTE 감정 라벨 이름으로 변환하도록 `ml/prepare_kote.py`를 수정했다.
+- `ml/data/kote_training_data.jsonl`을 생성했다.
+- 원본 TSV와 변환 JSONL이 Git에 포함되지 않도록 `.gitignore`에 제외 규칙을 추가했다.
+- `ml/train.py`의 기본 학습 데이터 경로를 `kote_training_data.jsonl`로 변경했다.
+
+### 확인 결과
+
+- 총 50,000개의 KOTE 문장이 JSONL로 변환됐다.
+- 변환된 데이터는 `text`와 `labels` 구조를 가진다.
+- KOTE 원본 TSV와 변환 JSONL은 Git 추적 대상에서 제외되는 것을 확인했다.

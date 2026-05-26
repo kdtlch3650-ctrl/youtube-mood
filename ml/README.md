@@ -24,6 +24,7 @@ ml/
   data/
     raw/
       .gitkeep
+    kote_training_data.jsonl
     sample_training_data.jsonl
   models/
     .gitkeep
@@ -77,7 +78,7 @@ ml/data/kote_training_data.jsonl
 
 `train.py`는 아래 순서로 동작한다.
 
-- `sample_training_data.jsonl` 파일을 읽는다.
+- `kote_training_data.jsonl` 파일을 읽는다.
 - 감정 라벨 목록을 정리한다.
 - 한 문장에 여러 라벨이 붙을 수 있도록 멀티라벨 형식으로 변환한다.
 - `klue/roberta-small` 토크나이저와 모델을 불러온다.
@@ -96,5 +97,6 @@ ml/data/kote_training_data.jsonl
 ## 8. 주의할 점
 
 - 학습용 코드는 백엔드 실행 코드와 분리한다.
+- KOTE 원본 TSV와 변환된 JSONL은 재생성 가능한 데이터이므로 Git에 포함하지 않는다.
 - 학습된 모델 파일은 크기가 커질 수 있으므로 Git에 바로 올릴지 따로 판단한다.
 - 새 라이브러리 설치가 필요하면 먼저 목적과 영향을 확인한 뒤 추가한다.
