@@ -177,6 +177,10 @@ function App() {
     ? Math.min(currentPlaylistTrackIndex, playlistTrackItems.length - 1)
     : 0
   const activePlaylistTrack = playlistTrackItems[activePlaylistTrackIndex] ?? playlistTrackItems[0] ?? null
+  const activePlayerVideoId =
+    selectedTab === 'playlist'
+      ? activePlaylistTrack?.video_id || null
+      : activeVideoId
   const selectedCardImage =
     selectedTab === 'playlist'
       ? activePlaylistTrack?.thumbnail_url || activeRecommendation?.thumbnail_url
@@ -272,7 +276,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!isResultView || !isYoutubeApiReady || !window.YT?.Player) {
+    if (!isResultView || !isYoutubeApiReady || !window.YT?.Player || !activePlayerVideoId) {
       return
     }
 
@@ -280,7 +284,7 @@ function App() {
       youtubePlayerRef.current = new window.YT.Player(YOUTUBE_PLAYER_ELEMENT_ID, {
         height: '1',
         width: '1',
-        videoId: activeVideoId ?? undefined,
+        videoId: activePlayerVideoId,
         playerVars: {
           autoplay: 0,
           playsinline: 1,
@@ -298,11 +302,11 @@ function App() {
           },
         },
       })
-      loadedVideoIdRef.current = activeVideoId
+      loadedVideoIdRef.current = activePlayerVideoId
       return
     }
   }, [
-    activeVideoId,
+    activePlayerVideoId,
     isResultView,
     isYoutubeApiReady,
   ])
