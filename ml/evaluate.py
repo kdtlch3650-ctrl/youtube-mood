@@ -15,7 +15,7 @@ MODEL_DIR = BASE_DIR / "models" / "mood-roberta-small"
 
 def parse_args() -> Namespace:
     parser = ArgumentParser(description="Evaluate trained KOTE emotion classifier.")
-    parser.add_argument("--max-samples", type=int, default=200, help="Use only the first N rows for quick evaluation.")
+    parser.add_argument("--max-samples", type=int, default=None, help="Use only the first N rows for quick evaluation.")
     parser.add_argument("--threshold", type=float, default=0.5, help="Prediction threshold for multi-label scores.")
     parser.add_argument(
         "--thresholds",
@@ -53,8 +53,9 @@ def encode_labels(rows: list[dict], label_names: list[str]) -> list[list[int]]:
 
 
 def predict_scores(rows: list[dict]) -> tuple[list[list[int]], list[list[float]]]:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
+    model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR).to(device)
     label_names = load_labels(MODEL_DIR / "labels.json")
     true_labels = encode_labels(rows, label_names)
     predicted_scores = []
@@ -69,11 +70,12 @@ def predict_scores(rows: list[dict]) -> tuple[list[list[int]], list[list[float]]
             max_length=128,
             return_tensors="pt",
         )
+        encoded = {key: value.to(device) for key, value in encoded.items()}
 
         with torch.no_grad():
             outputs = model(**encoded)
 
-        scores = torch.sigmoid(outputs.logits).squeeze(0)
+        scores = torch.sigmoid(outputs.logits).squeeze(0).cpu()
         predicted_scores.append(scores.tolist())
 
     return true_labels, predicted_scores
@@ -94,7 +96,11 @@ def print_metrics(true_labels: list[list[int]], predicted_labels: list[list[int]
 
 def main() -> None:
     args = parse_args()
-    rows = load_jsonl(DATA_PATH)[: args.max_samples]
+    rows = load_jsonl(DATA_PATH)
+
+    if args.max_samples is not None:
+        rows = rows[: args.max_samples]
+
     _, valid_rows = train_test_split(rows, test_size=0.2, random_state=42)
     true_labels, predicted_scores = predict_scores(valid_rows)
     thresholds = args.thresholds if args.thresholds else [args.threshold]

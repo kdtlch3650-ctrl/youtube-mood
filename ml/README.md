@@ -114,15 +114,22 @@ ml/.venv/Scripts/python ml/train.py --max-samples 500
 학습 환경 확인 예시:
 
 ```text
-torch 2.12.0+cpu
+torch 2.11.0+cu128
 transformers 5.9.0
 sklearn 1.8.0
 accelerate 1.13.0
-cuda False
+cuda True
 ```
 
-`cuda False`는 현재 CPU 학습 환경이라는 뜻이다.
-나중에 실제 전체 학습을 GPU로 진행하려면 GPU용 PyTorch를 다시 설치하면 된다.
+`cuda True`는 PyTorch가 GPU를 사용할 수 있다는 뜻이다.
+
+GPU용 PyTorch는 일반 `requirements.txt` 설치와 별도로 아래처럼 설치했다.
+
+```bash
+ml/.venv/Scripts/python -m pip install torch --index-url https://download.pytorch.org/whl/cu128
+```
+
+이 프로젝트의 ML 환경에서는 RTX 5060 GPU가 인식되는 것을 확인했다.
 
 ## 8. 샘플 추론
 
@@ -139,13 +146,21 @@ ml/.venv/Scripts/python ml/predict_sample.py "오늘 너무 지치고 아무것�
 학습된 모델의 현재 성능을 간단히 확인하려면 아래 명령을 사용한다.
 
 ```bash
-ml/.venv/Scripts/python ml/evaluate.py --max-samples 200
+ml/.venv/Scripts/python ml/evaluate.py
+```
+
+기본 실행은 전체 데이터에서 검증 데이터 20%를 평가한다.
+
+빠르게 일부 샘플만 확인하려면 `--max-samples`를 사용한다.
+
+```bash
+ml/.venv/Scripts/python ml/evaluate.py --max-samples 500
 ```
 
 여러 threshold를 비교하려면 아래처럼 실행한다.
 
 ```bash
-ml/.venv/Scripts/python ml/evaluate.py --max-samples 500 --thresholds 0.3 0.4 0.5
+ml/.venv/Scripts/python ml/evaluate.py --thresholds 0.2 0.3 0.4 0.5
 ```
 
 평가 스크립트는 아래 지표를 출력한다.
@@ -155,7 +170,16 @@ ml/.venv/Scripts/python ml/evaluate.py --max-samples 500 --thresholds 0.3 0.4 0.
 - `f1_micro`
 - `f1_macro`
 
-현재 샘플 모델은 작은 데이터로만 학습했기 때문에 점수보다 평가 흐름이 정상 동작하는지 확인하는 것이 목적이다.
+현재 전체 KOTE 50,000개 기준으로 학습한 모델에서는 `threshold 0.3`의 `f1_micro`가 가장 높게 나왔다.
+
+전체 검증 데이터 10,000개 기준 평가 결과:
+
+| threshold | precision_micro | recall_micro | f1_micro | f1_macro |
+| --- | --- | --- | --- | --- |
+| `0.2` | `0.5044` | `0.7733` | `0.6106` | `0.3034` |
+| `0.3` | `0.5787` | `0.6835` | `0.6268` | `0.3001` |
+| `0.4` | `0.6404` | `0.5989` | `0.6190` | `0.2846` |
+| `0.5` | `0.6972` | `0.5156` | `0.5928` | `0.2600` |
 
 ## 10. 주의할 점
 
