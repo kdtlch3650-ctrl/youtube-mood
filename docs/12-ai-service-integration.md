@@ -183,3 +183,37 @@ KOTE 모델 어댑터는 `backend/app/ai/kote_adapter.py`에서 관리한다.
 `load_model()`은 `lru_cache`를 사용해 첫 요청에서 선택한 모델을 재사용한다.
 
 이 구조 덕분에 백엔드 요청마다 모델 파일을 다시 읽지 않는다.
+
+## 12. 실제 백엔드 연결 상태
+
+백엔드 실행 환경에 아래 추론 의존성을 추가했다.
+
+- `torch`
+- `transformers`
+
+현재 로컬 모델 파일이 있는 경우 `load_model()`은 `KoteModelAdapter`를 선택한다.
+
+확인한 흐름:
+
+```text
+backend/.venv
+→ torch/transformers import 가능
+→ ml/models/mood-roberta-small/ 모델 파일 확인
+→ KoteModelAdapter 로드
+→ KOTE 감정 라벨 예측
+```
+
+샘플 문장:
+
+```text
+오늘 너무 지치고 아무것도 하기 싫다
+```
+
+예측 예시:
+
+```text
+불평/불만, 서러움, 슬픔, 안타까움/실망, 재미없음, 절망, 지긋지긋, 짜증, 힘듦/지침
+```
+
+첫 요청은 모델 로딩이 포함되므로 느릴 수 있다.
+이후 요청은 메모리에 올라간 모델을 재사용한다.

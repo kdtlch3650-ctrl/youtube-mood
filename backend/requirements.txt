@@ -1,4 +1,6 @@
 fastapi
 python-dotenv
 requests
+torch
+transformers
 uvicorn[standard]
