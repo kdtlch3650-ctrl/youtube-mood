@@ -1251,3 +1251,28 @@ search_keywords: ['soft emotional music', 'light feel good music', 'quiet calm p
 ```
 
 그룹 라벨 모델 결과와 문장 기반 회피 표현 보정이 함께 적용되는 것을 확인했다.
+
+## 2026-05-27 추천 곡 선택 시 플레이어 갱신 문제 수정
+
+### 문제
+
+추천 곡 목록에서 다른 곡을 선택해도 하단 플레이어의 실제 YouTube 재생 대상이 바로 바뀌지 않는 문제가 있었다.
+
+### 원인
+
+선택된 곡의 상태는 `selectedTrackId`로 바뀌었지만, 이미 생성된 YouTube 플레이어에는 새 `videoId`를 다시 로드하지 않았다.
+
+즉 화면의 선택 상태와 YouTube 플레이어 내부 로드 상태가 분리되어 있었다.
+
+### 해결
+
+`activePlayerVideoId`가 바뀌었을 때 이미 생성된 플레이어에도 `loadVideoById()`를 호출하도록 수정했다.
+
+또한 새 곡으로 바뀌면 재생 시간과 전체 길이 상태를 초기화하도록 했다.
+
+### 확인 결과
+
+- `npx tsc -b`를 통과했다.
+- `npm run lint`를 통과했다.
+- `npm run build`를 통과했다.
+- Vite 개발 서버에 HMR로 수정이 반영됐다.

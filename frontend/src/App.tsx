@@ -305,6 +305,13 @@ function App() {
       loadedVideoIdRef.current = activePlayerVideoId
       return
     }
+
+    if (loadedVideoIdRef.current !== activePlayerVideoId) {
+      youtubePlayerRef.current.loadVideoById(activePlayerVideoId)
+      loadedVideoIdRef.current = activePlayerVideoId
+      setCurrentTime(0)
+      setDuration(0)
+    }
   }, [
     activePlayerVideoId,
     isResultView,
