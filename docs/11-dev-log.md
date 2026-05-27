@@ -1219,3 +1219,35 @@ f1_macro 0.6401
 ### 다음 판단
 
 바로 기존 모델을 교체하기보다는, 그룹 라벨 결과를 백엔드 추천 태그와 연결하는 별도 어댑터를 만든 뒤 실제 추천 결과를 비교하는 것이 좋다.
+
+## 2026-05-27 그룹 라벨 모델 백엔드 연결
+
+### 작업 목적
+
+전체 학습된 그룹 라벨 모델을 백엔드 추천 흐름에 연결해 실제 API 응답에서 사용할 수 있게 한다.
+
+### 작업 내용
+
+- 그룹 라벨 모델 경로 `ml/models/grouped-mood-roberta-small/`를 백엔드 모델 후보에 추가했다.
+- 로컬에 그룹 라벨 모델이 있으면 기존 KOTE 원본 라벨 모델보다 먼저 사용하도록 했다.
+- 그룹 라벨 모델이 없으면 기존 KOTE 원본 라벨 모델로 fallback한다.
+- 그룹 라벨도 `mood_tags`로 변환할 수 있도록 `GROUPED_MOOD_TAGS` 매핑을 추가했다.
+- 백엔드 서버를 재시작해 실제 `/api/analyze` 응답을 확인했다.
+
+### 확인 결과
+
+입력 문장:
+
+```text
+불안하지만 너무 무거운 음악은 싫다
+```
+
+API 응답 일부:
+
+```text
+emotions: ['anxiety', 'irritation', 'sadness']
+mood_tags: ['soft', 'light', 'quiet', 'warm']
+search_keywords: ['soft emotional music', 'light feel good music', 'quiet calm playlist']
+```
+
+그룹 라벨 모델 결과와 문장 기반 회피 표현 보정이 함께 적용되는 것을 확인했다.

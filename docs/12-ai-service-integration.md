@@ -217,3 +217,44 @@ backend/.venv
 
 첫 요청은 모델 로딩이 포함되므로 느릴 수 있다.
 이후 요청은 메모리에 올라간 모델을 재사용한다.
+
+## 13. 그룹 라벨 모델 연결 상태
+
+실험 브랜치에서는 전체 학습된 그룹 라벨 모델을 백엔드에서 우선 사용한다.
+
+모델 선택 순서:
+
+```text
+그룹 라벨 모델 있음
+→ grouped-mood-roberta-small 사용
+
+그룹 라벨 모델 없음 + KOTE 원본 라벨 모델 있음
+→ mood-roberta-small 사용
+
+모델 파일 없음 또는 의존성 없음
+→ 기존 규칙 기반 AiModel 사용
+```
+
+그룹 라벨 모델은 아래 라벨을 예측한다.
+
+```text
+anxiety
+comfort
+focus
+irritation
+neutral
+positive
+sadness
+tiredness
+```
+
+그룹 라벨은 `backend/app/ai/mood_mapping.py`의 `GROUPED_MOOD_TAGS`를 통해 음악 분위기 태그로 변환한다.
+
+예시:
+
+```text
+anxiety → soft, quiet, warm
+irritation → heavy, uplifting
+sadness → warm, soft, late night
+tiredness → soft, quiet, warm
+```

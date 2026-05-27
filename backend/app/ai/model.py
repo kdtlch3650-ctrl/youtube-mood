@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from functools import lru_cache
 
-from app.ai.kote_adapter import KoteModelAdapter
+from app.ai.kote_adapter import GROUPED_MODEL_DIR, KoteModelAdapter
 from app.ai.labels import EMOTION_LABELS, MOOD_LABELS
 
 
@@ -67,6 +67,12 @@ class AiModel:
 @lru_cache(maxsize=1)
 def load_model() -> AiModel | KoteModelAdapter:
     # 모델 로딩 로직을 한곳에 모아두면 나중에 교체하기 쉽다.
+    if KoteModelAdapter.is_available(GROUPED_MODEL_DIR):
+        try:
+            return KoteModelAdapter(model_dir=GROUPED_MODEL_DIR)
+        except ImportError:
+            return AiModel()
+
     if KoteModelAdapter.is_available():
         try:
             return KoteModelAdapter()

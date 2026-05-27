@@ -27,6 +27,17 @@ LEGACY_MOOD_TAGS: dict[str, list[str]] = {
     "lonely": ["late night", "warm", "soft"],
 }
 
+GROUPED_MOOD_TAGS: dict[str, list[str]] = {
+    "anxiety": ["soft", "quiet", "warm"],
+    "sadness": ["warm", "soft", "late night"],
+    "tiredness": ["soft", "quiet", "warm"],
+    "irritation": ["heavy", "uplifting"],
+    "positive": ["uplifting", "light"],
+    "comfort": ["warm", "soft"],
+    "focus": ["minimal", "quiet"],
+    "neutral": ["soft"],
+}
+
 SEARCH_KEYWORDS_BY_MOOD: dict[str, str] = {
     "soft": "soft emotional music",
     "quiet": "quiet calm playlist",
@@ -74,6 +85,7 @@ def build_mood_tags(emotions: list[str]) -> list[str]:
     mood_tags = []
 
     for emotion in emotions:
+        mood_tags.extend(GROUPED_MOOD_TAGS.get(emotion, []))
         mood_tags.extend(KOTE_MOOD_TAGS.get(emotion, []))
         mood_tags.extend(LEGACY_MOOD_TAGS.get(emotion, []))
 

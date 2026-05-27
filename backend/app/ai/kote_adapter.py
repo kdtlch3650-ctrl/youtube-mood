@@ -5,6 +5,7 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 MODEL_DIR = PROJECT_ROOT / "ml" / "models" / "mood-roberta-small"
+GROUPED_MODEL_DIR = PROJECT_ROOT / "ml" / "models" / "grouped-mood-roberta-small"
 DEFAULT_THRESHOLD = 0.3
 
 
