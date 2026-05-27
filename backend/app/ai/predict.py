@@ -1,5 +1,5 @@
 from app.ai.model import load_model
-from app.ai.mood_mapping import build_mood_tags, build_search_keywords
+from app.ai.mood_mapping import adjust_mood_tags_by_text, build_mood_tags, build_search_keywords
 from app.ai.preprocess import preprocess_text
 from app.ai.schema import AnalysisResult
 
@@ -15,6 +15,7 @@ def predict_analysis(text: str) -> AnalysisResult:
     predicted = model.predict(cleaned_text)
     emotions = predicted.get("emotions", [])
     mood_tags = predicted.get("mood_tags") or build_mood_tags(emotions)
+    mood_tags = adjust_mood_tags_by_text(mood_tags, cleaned_text)
 
     # 4. 검색용 키워드를 만든다.
     search_keywords = build_search_keywords(emotions, mood_tags)

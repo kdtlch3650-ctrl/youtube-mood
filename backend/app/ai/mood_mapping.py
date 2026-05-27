@@ -38,6 +38,27 @@ SEARCH_KEYWORDS_BY_MOOD: dict[str, str] = {
     "minimal": "minimal focus music",
 }
 
+TEXT_MOOD_ADJUSTMENTS = [
+    {
+        "avoid_keywords": ["무거운", "무겁", "어두운", "어둡", "강한", "격한"],
+        "negative_words": ["싫", "부담", "피하고", "원하지", "안 듣고"],
+        "remove_tags": ["heavy", "late night"],
+        "add_tags": ["soft", "light"],
+    },
+    {
+        "avoid_keywords": ["슬픈", "슬프", "우울", "눈물"],
+        "negative_words": ["싫", "부담", "피하고", "원하지", "안 듣고"],
+        "remove_tags": ["late night"],
+        "add_tags": ["warm", "light"],
+    },
+    {
+        "avoid_keywords": ["신나는", "신나", "밝은", "활기찬"],
+        "negative_words": ["싫", "부담", "피하고", "원하지", "안 듣고"],
+        "remove_tags": ["uplifting", "light"],
+        "add_tags": ["soft", "quiet"],
+    },
+]
+
 
 def unique_values(values: list[str]) -> list[str]:
     result = []
@@ -57,6 +78,23 @@ def build_mood_tags(emotions: list[str]) -> list[str]:
         mood_tags.extend(LEGACY_MOOD_TAGS.get(emotion, []))
 
     return unique_values(mood_tags)[:4]
+
+
+def adjust_mood_tags_by_text(mood_tags: list[str], text: str) -> list[str]:
+    adjusted_tags = mood_tags.copy()
+
+    for rule in TEXT_MOOD_ADJUSTMENTS:
+        has_avoid_target = any(keyword in text for keyword in rule["avoid_keywords"])
+        has_negative_word = any(word in text for word in rule["negative_words"])
+
+        if not has_avoid_target or not has_negative_word:
+            continue
+
+        # 사용자가 원하지 않는 분위기를 직접 말한 경우에는 감정 라벨보다 문장 의도를 우선한다.
+        filtered_tags = [tag for tag in adjusted_tags if tag not in rule["remove_tags"]]
+        adjusted_tags = [*rule["add_tags"], *filtered_tags]
+
+    return unique_values(adjusted_tags)[:4]
 
 
 def build_search_keywords(emotions: list[str], mood_tags: list[str]) -> list[str]:

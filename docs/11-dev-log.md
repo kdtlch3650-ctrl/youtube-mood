@@ -1097,3 +1097,34 @@ CPU 샘플 학습보다 큰 범위에서 실제 사용할 수 있는 1차 KOTE �
 - `npm run lint`를 통과했다.
 - `npm run build`를 통과했다.
 - 영상 ID가 없는 중간 상태에서도 결과 UI가 먼저 렌더링될 수 있는 구조가 됐다.
+
+## 2026-05-27 문장 기반 분위기 태그 보정 추가
+
+### 작업 목적
+
+모델이 예측한 감정 라벨만으로 음악 분위기를 정하지 않고, 사용자가 문장 안에서 말한 회피 표현도 추천에 반영한다.
+
+### 작업 내용
+
+- `mood_mapping.py`에 `adjust_mood_tags_by_text()`를 추가했다.
+- “무거운 음악은 싫다” 같은 표현이 있으면 `heavy`, `late night` 계열을 줄이고 `soft`, `light`를 우선 적용하도록 했다.
+- “너무 슬픈 노래는 싫다” 같은 표현이 있으면 `late night`를 줄이고 `warm`, `light`를 우선 적용하도록 했다.
+- “신나는 건 부담스럽다” 같은 표현이 있으면 `uplifting`, `light`를 줄이고 `soft`, `quiet`를 우선 적용하도록 했다.
+- `predict_analysis()`에서 감정 기반 기본 태그 생성 후 문장 기반 보정을 적용하도록 연결했다.
+
+### 확인 결과
+
+입력 문장:
+
+```text
+불안하지만 너무 무거운 음악은 싫다
+```
+
+보정 결과:
+
+```text
+mood_tags: ['soft', 'light', 'quiet', 'warm']
+search_keywords: ['soft emotional music', 'light feel good music', 'quiet calm playlist']
+```
+
+감정 라벨에 `불안/걱정`, `짜증`이 같이 나오더라도 사용자의 회피 표현이 분위기 태그에 우선 반영되는 것을 확인했다.
