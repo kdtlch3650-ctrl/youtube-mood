@@ -210,3 +210,51 @@ Git에 포함하지 않는 것:
 - 체크포인트
 - 토크나이저 저장 파일
 - 대용량 학습 결과물
+
+## 12. 그룹 라벨 모델 실험
+
+KOTE 원본 감정 라벨은 세부 라벨이 많아 음악 추천 목적에는 너무 복잡할 수 있다.
+
+그래서 별도 실험으로 KOTE 라벨을 추천용 감정 그룹으로 묶은 모델을 만든다.
+
+그룹 라벨 기준은 `grouped_labels.py`에서 관리한다.
+
+그룹 학습 데이터 생성:
+
+```bash
+ml/.venv/Scripts/python ml/prepare_grouped_kote.py
+```
+
+생성 결과:
+
+```text
+ml/data/grouped_kote_training_data.jsonl
+```
+
+이 파일은 원본 KOTE JSONL에서 다시 만들 수 있으므로 Git에 포함하지 않는다.
+
+그룹 모델 소량 학습 예시:
+
+```bash
+ml/.venv/Scripts/python ml/train.py \
+  --data-path ml/data/grouped_kote_training_data.jsonl \
+  --output-dir ml/models/grouped-mood-roberta-small \
+  --max-samples 1000
+```
+
+그룹 모델 평가 예시:
+
+```bash
+ml/.venv/Scripts/python ml/evaluate.py \
+  --data-path ml/data/grouped_kote_training_data.jsonl \
+  --model-dir ml/models/grouped-mood-roberta-small \
+  --max-samples 1000 \
+  --thresholds 0.2 0.3 0.4 0.5
+```
+
+기존 KOTE 원본 라벨 모델과 새 그룹 라벨 모델은 서로 다른 폴더에 저장한다.
+
+```text
+ml/models/mood-roberta-small/
+ml/models/grouped-mood-roberta-small/
+```

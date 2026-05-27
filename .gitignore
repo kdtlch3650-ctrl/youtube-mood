@@ -15,6 +15,7 @@ venv/
 # ML data
 ml/data/raw/*.tsv
 ml/data/kote_training_data.jsonl
+ml/data/grouped_kote_training_data.jsonl
 ml/models/*
 !ml/models/.gitkeep
 

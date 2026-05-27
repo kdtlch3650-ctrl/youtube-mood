@@ -88,12 +88,14 @@ def parse_args() -> Namespace:
         default=None,
         help="Use only the first N rows for a quick training pipeline test.",
     )
+    parser.add_argument("--data-path", type=Path, default=DATA_PATH, help="Training JSONL data path.")
+    parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR, help="Directory to save trained model.")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    rows = limit_rows(load_jsonl(DATA_PATH), args.max_samples)
+    rows = limit_rows(load_jsonl(args.data_path), args.max_samples)
     label_names = collect_labels(rows)
     labels = encode_labels(rows, label_names)
     texts = [row["text"] for row in rows]
@@ -116,7 +118,7 @@ def main() -> None:
     )
 
     training_args = TrainingArguments(
-        output_dir=str(OUTPUT_DIR),
+        output_dir=str(args.output_dir),
         learning_rate=2e-5,
         per_device_train_batch_size=4,
         per_device_eval_batch_size=4,
@@ -134,10 +136,10 @@ def main() -> None:
     )
 
     trainer.train()
-    trainer.save_model(str(OUTPUT_DIR))
-    tokenizer.save_pretrained(str(OUTPUT_DIR))
+    trainer.save_model(str(args.output_dir))
+    tokenizer.save_pretrained(str(args.output_dir))
 
-    label_path = OUTPUT_DIR / "labels.json"
+    label_path = args.output_dir / "labels.json"
     label_path.write_text(json.dumps(label_names, ensure_ascii=False, indent=2), encoding="utf-8")
 
 

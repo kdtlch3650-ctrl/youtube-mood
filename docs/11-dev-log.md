@@ -1128,3 +1128,48 @@ search_keywords: ['soft emotional music', 'light feel good music', 'quiet calm p
 ```
 
 감정 라벨에 `불안/걱정`, `짜증`이 같이 나오더라도 사용자의 회피 표현이 분위기 태그에 우선 반영되는 것을 확인했다.
+
+## 2026-05-27 그룹 라벨 모델 실험 시작
+
+### 작업 목적
+
+KOTE 원본 세부 감정 라벨을 그대로 예측하는 방식보다, 음악 추천에 필요한 감정 그룹을 직접 예측하는 방식이 더 안정적인지 실험한다.
+
+### 작업 내용
+
+- 실험 브랜치 `experiment/grouped-kote-labels`를 만들었다.
+- KOTE 원본 라벨을 추천용 그룹 라벨로 바꾸는 `ml/grouped_labels.py`를 추가했다.
+- 그룹 학습 데이터를 생성하는 `ml/prepare_grouped_kote.py`를 추가했다.
+- `ml/train.py`에 `--data-path`, `--output-dir` 옵션을 추가했다.
+- `ml/evaluate.py`에 `--data-path`, `--model-dir` 옵션을 추가했다.
+- 기존 KOTE 모델과 분리된 `ml/models/grouped-mood-roberta-small/` 경로에 새 모델을 저장하도록 했다.
+- 재생성 가능한 그룹 학습 데이터는 Git에 포함하지 않도록 `.gitignore`에 추가했다.
+
+### 그룹 라벨
+
+현재 1차 그룹 라벨은 아래처럼 정했다.
+
+- `anxiety`
+- `sadness`
+- `tiredness`
+- `irritation`
+- `positive`
+- `comfort`
+- `focus`
+- `neutral`
+
+### 1000개 샘플 학습 결과
+
+`--max-samples 1000` 기준으로 먼저 학습 파이프라인을 검증했다.
+
+| threshold | precision_micro | recall_micro | f1_micro | f1_macro |
+| --- | --- | --- | --- | --- |
+| `0.2` | `0.5063` | `0.8208` | `0.6263` | `0.5361` |
+| `0.3` | `0.5866` | `0.7515` | `0.6589` | `0.5479` |
+| `0.4` | `0.6345` | `0.6823` | `0.6575` | `0.5128` |
+| `0.5` | `0.6812` | `0.6049` | `0.6408` | `0.4516` |
+
+### 판단
+
+1000개 샘플 기준에서는 `threshold 0.3`이 가장 좋았다.
+특히 `f1_macro`가 기존 세부 KOTE 라벨 모델보다 높게 나올 가능성을 보였지만, 아직 샘플 실험이므로 전체 학습 후 다시 비교해야 한다.
