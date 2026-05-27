@@ -258,3 +258,14 @@ ml/.venv/Scripts/python ml/evaluate.py \
 ml/models/mood-roberta-small/
 ml/models/grouped-mood-roberta-small/
 ```
+
+전체 50,000개 데이터 기준 그룹 모델 평가 결과:
+
+| threshold | precision_micro | recall_micro | f1_micro | f1_macro |
+| --- | --- | --- | --- | --- |
+| `0.2` | `0.6345` | `0.8609` | `0.7306` | `0.6399` |
+| `0.3` | `0.6811` | `0.8051` | `0.7379` | `0.6401` |
+| `0.4` | `0.7203` | `0.7542` | `0.7369` | `0.6284` |
+| `0.5` | `0.7540` | `0.7028` | `0.7275` | `0.6101` |
+
+현재 비교 기준에서는 `threshold 0.3`이 가장 균형이 좋다.
