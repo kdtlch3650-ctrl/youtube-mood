@@ -1432,3 +1432,23 @@ CHECK: 0
 - `docs/17-model-error-analysis.md`를 추가했다.
 - 입력 문장, 기대 감정, 실제 결과, 원인 추정, 개선 아이디어를 남길 수 있게 했다.
 - 실패 케이스가 쌓이면 라벨 매핑, threshold, 데이터 보강, 재학습 순서로 개선할 수 있게 정리했다.
+
+## 2026-05-28 단위 테스트 추가
+
+### 작업 목적
+
+추천 로직의 핵심 함수들을 stdlib `unittest`로 직접 검증할 수 있게 한다.
+
+### 작업 내용
+
+- `backend/tests/`에 단위 테스트 파일을 추가했다.
+- `genre_mapping`, `mood_mapping`, `build_youtube_query`, `predict_analysis`를 함수 단위로 검증했다.
+- 외부 YouTube API 호출은 포함하지 않고, 내부 로직만 빠르게 확인하도록 했다.
+- 백엔드 가상환경 기준으로 테스트를 실행해 통과를 확인했다.
+
+### 확인 결과
+
+```text
+Ran 13 tests in 0.005s
+OK
+```

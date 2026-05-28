@@ -134,6 +134,13 @@ API 키가 없거나 YouTube 요청이 실패하면 백엔드는 fallback 추천
 
 ## 테스트
 
+단위 테스트 확인:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
 추천 로직 확인:
 
 ```powershell

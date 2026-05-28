@@ -75,6 +75,13 @@ http://127.0.0.1:5173
 
 ## 5. 테스트 스크립트 확인
 
+- [ ] 정식 단위 테스트가 통과하는가
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
 - [ ] 추천 케이스 확인 스크립트가 통과하는가
 
 ```powershell
