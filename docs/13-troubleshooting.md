@@ -92,7 +92,7 @@ search_keywords: soft emotional music, light feel good music, quiet calm playlis
 
 - 동작 이유를 설명하기 쉽다.
 - 어떤 표현 때문에 태그가 바뀌었는지 추적하기 쉽다.
-- 초기 포트폴리오 프로젝트 규모에 맞게 단순하다.
+- 현재 프로젝트 규모에 맞게 단순하다.
 
 한계:
 
