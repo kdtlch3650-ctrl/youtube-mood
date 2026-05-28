@@ -984,8 +984,8 @@ function App() {
                   </div>
                 </article>
               </section>
-              <section className="mood-panel" aria-label="감정 분석 결과">
-                <h2>Mood</h2>
+              <section className="mood-panel" aria-label="추천 키워드">
+                <h2>Keywords</h2>
                 {moodHighlights.map((tag) => (
                   <div className="mood-card" key={tag}>
                     <strong>{tag}</strong>

@@ -1,18 +1,52 @@
 import re
 
 
-GENRE_KEYWORDS: dict[str, list[str]] = {
+SAFE_GENRE_KEYWORDS: dict[str, list[str]] = {
     "jazz": ["jazz", "재즈"],
     "hiphop": ["hiphop", "hip hop", "힙합", "랩"],
     "lofi": ["lofi", "lo-fi", "로파이", "로우파이"],
-    "rock": ["rock", "락", "록"],
     "ballad": ["ballad", "발라드"],
     "rnb": ["rnb", "r&b", "알앤비"],
-    "pop": ["pop", "팝"],
     "classical": ["classical", "클래식"],
     "edm": ["edm", "일렉", "일렉트로닉"],
     "acoustic": ["acoustic", "어쿠스틱"],
+    "kpop": ["kpop", "k-pop", "케이팝", "케이 pop"],
+    "citypop": ["citypop", "city pop", "시티팝"],
+    "ambient": ["ambient", "앰비언트"],
+    "metal": ["metal", "메탈"],
+    "reggae": ["reggae", "레게"],
+    "ost": ["ost", "오에스티", "사운드트랙"],
 }
+
+AMBIGUOUS_GENRE_KEYWORDS: dict[str, list[str]] = {
+    "rock": ["rock", "락", "록"],
+    "pop": ["pop", "팝"],
+    "indie": ["indie", "인디"],
+    "funk": ["funk", "펑크"],
+    "soul": ["soul", "소울"],
+    "blues": ["blues", "블루스"],
+    "punk": ["punk", "펑크락", "펑크 록"],
+    "house": ["house", "하우스"],
+    "techno": ["techno", "테크노"],
+    "trap": ["trap", "트랩"],
+    "dance": ["dance", "댄스"],
+    "folk": ["folk", "포크"],
+}
+
+MUSIC_CONTEXT_KEYWORDS = [
+    "음악",
+    "노래",
+    "곡",
+    "플레이리스트",
+    "듣고",
+    "추천",
+    "music",
+    "song",
+    "songs",
+    "playlist",
+    "track",
+    "tracks",
+]
 
 
 def _contains_keyword(text: str, keyword: str) -> bool:
@@ -22,19 +56,33 @@ def _contains_keyword(text: str, keyword: str) -> bool:
     return keyword in text
 
 
-def extract_genre(text: str) -> str | None:
-    normalized_text = text.lower()
+def _collect_matches(text: str, genre_keywords: dict[str, list[str]]) -> list[tuple[int, str]]:
     matches: list[tuple[int, str]] = []
 
-    for genre, keywords in GENRE_KEYWORDS.items():
+    for genre, keywords in genre_keywords.items():
         for keyword in keywords:
             normalized_keyword = keyword.lower()
 
-            if not _contains_keyword(normalized_text, normalized_keyword):
+            if not _contains_keyword(text, normalized_keyword):
                 continue
 
-            matches.append((normalized_text.find(normalized_keyword), genre))
+            matches.append((text.find(normalized_keyword), genre))
             break
+
+    return matches
+
+
+def _has_music_context(text: str) -> bool:
+    return any(keyword in text for keyword in MUSIC_CONTEXT_KEYWORDS)
+
+
+def extract_genre(text: str) -> str | None:
+    normalized_text = text.lower()
+    matches = _collect_matches(normalized_text, SAFE_GENRE_KEYWORDS)
+
+    # 일반 단어와 겹칠 수 있는 장르는 음악 관련 문맥이 있을 때만 인정한다.
+    if _has_music_context(normalized_text):
+        matches.extend(_collect_matches(normalized_text, AMBIGUOUS_GENRE_KEYWORDS))
 
     if not matches:
         return None
