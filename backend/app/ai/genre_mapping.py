@@ -48,6 +48,15 @@ MUSIC_CONTEXT_KEYWORDS = [
     "tracks",
 ]
 
+NEGATIVE_RECOMMENDATION_PHRASES = [
+    "추천은 아니",
+    "추천 아니",
+    "추천을 원하는 건 아니",
+    "추천을 원한 건 아니",
+    "듣고 싶은 건 아니",
+    "듣고 싶진 않",
+]
+
 
 def _contains_keyword(text: str, keyword: str) -> bool:
     if keyword.isascii() and keyword.replace("-", "").replace("&", "").replace(" ", "").isalnum():
@@ -76,8 +85,16 @@ def _has_music_context(text: str) -> bool:
     return any(keyword in text for keyword in MUSIC_CONTEXT_KEYWORDS)
 
 
+def _is_negative_recommendation_context(text: str) -> bool:
+    return any(phrase in text for phrase in NEGATIVE_RECOMMENDATION_PHRASES)
+
+
 def extract_genre(text: str) -> str | None:
     normalized_text = text.lower()
+
+    if _is_negative_recommendation_context(normalized_text):
+        return None
+
     matches = _collect_matches(normalized_text, SAFE_GENRE_KEYWORDS)
 
     # 일반 단어와 겹칠 수 있는 장르는 음악 관련 문맥이 있을 때만 인정한다.
