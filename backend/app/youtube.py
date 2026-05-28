@@ -1,3 +1,5 @@
+from typing import Literal
+
 import requests
 
 from app.config import YOUTUBE_API_KEY
@@ -5,13 +7,80 @@ from app.schemas import PlaylistTrackItem, RecommendationItem
 
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 YOUTUBE_PLAYLIST_ITEMS_URL = "https://www.googleapis.com/youtube/v3/playlistItems"
+SearchScope = Literal["all", "korean"]
+
+KOREAN_MOOD_SEARCH_PHRASES: dict[str, str] = {
+    "soft": "부드러운",
+    "quiet": "차분한",
+    "warm": "따뜻한",
+    "late night": "밤에 듣기 좋은",
+    "heavy": "강렬한",
+    "uplifting": "신나는",
+    "light": "가볍게 듣는",
+    "minimal": "집중할 때 듣는",
+}
+
+KOREAN_GENRE_NAMES: dict[str, str] = {
+    "jazz": "재즈",
+    "hiphop": "힙합",
+    "lofi": "로파이",
+    "rock": "록",
+    "ballad": "발라드",
+    "rnb": "알앤비",
+    "pop": "팝",
+    "classical": "클래식",
+    "edm": "일렉트로닉",
+    "acoustic": "어쿠스틱",
+    "kpop": "케이팝",
+    "citypop": "시티팝",
+    "ambient": "앰비언트",
+    "metal": "메탈",
+    "reggae": "레게",
+    "ost": "OST",
+    "indie": "인디",
+    "funk": "펑크",
+    "soul": "소울",
+    "blues": "블루스",
+    "punk": "펑크 록",
+    "house": "하우스",
+    "techno": "테크노",
+    "trap": "트랩",
+    "dance": "댄스",
+    "folk": "포크",
+}
 
 
 def has_youtube_api_key() -> bool:
     return bool(YOUTUBE_API_KEY)
 
 
-def search_youtube(query: str, result_type: str, max_results: int) -> list[dict]:
+def build_search_params(
+    query: str,
+    result_type: str,
+    max_results: int,
+    search_scope: SearchScope,
+) -> dict[str, str | int]:
+    params: dict[str, str | int] = {
+        "part": "snippet",
+        "q": query,
+        "type": result_type,
+        "maxResults": max_results,
+        "key": YOUTUBE_API_KEY,
+    }
+
+    if search_scope == "korean":
+        params["regionCode"] = "KR"
+        params["relevanceLanguage"] = "ko"
+
+    return params
+
+
+def search_youtube(
+    query: str,
+    result_type: str,
+    max_results: int,
+    search_scope: SearchScope = "all",
+) -> list[dict]:
     # API key가 없으면 외부 요청을 보내지 않고 fallback 데이터를 사용한다.
     if not has_youtube_api_key():
         return []
@@ -19,13 +88,7 @@ def search_youtube(query: str, result_type: str, max_results: int) -> list[dict]
     try:
         response = requests.get(
             YOUTUBE_SEARCH_URL,
-            params={
-                "part": "snippet",
-                "q": query,
-                "type": result_type,
-                "maxResults": max_results,
-                "key": YOUTUBE_API_KEY,
-            },
+            params=build_search_params(query, result_type, max_results, search_scope),
             timeout=5,
         )
         response.raise_for_status()
@@ -35,6 +98,43 @@ def search_youtube(query: str, result_type: str, max_results: int) -> list[dict]
 
     data = response.json()
     return data.get("items", [])
+
+
+def build_youtube_query(
+    search_keywords: list[str],
+    mood_tags: list[str],
+    genre: str | None,
+    search_scope: SearchScope,
+    result_kind: Literal["music", "playlist"],
+) -> str:
+    if search_scope != "korean":
+        keyword = search_keywords[0] if search_keywords else "calm warm music"
+        if result_kind in keyword.lower():
+            return keyword
+
+        return f"{keyword} {result_kind}"
+
+    korean_genre = KOREAN_GENRE_NAMES.get(genre or "", genre)
+    mood_phrase = next(
+        (
+            KOREAN_MOOD_SEARCH_PHRASES[mood_tag]
+            for mood_tag in mood_tags
+            if mood_tag in KOREAN_MOOD_SEARCH_PHRASES
+        ),
+        "",
+    )
+    result_word = "플레이리스트" if result_kind == "playlist" else "음악"
+
+    if korean_genre and mood_phrase:
+        return f"{mood_phrase} {korean_genre} {result_word}"
+
+    if korean_genre:
+        return f"{korean_genre} {result_word}"
+
+    if mood_phrase:
+        return f"{mood_phrase} {result_word}"
+
+    return "기분에 맞는 음악"
 
 
 def search_playlist_tracks(playlist_id: str, max_results: int = 10) -> list[PlaylistTrackItem]:
@@ -183,9 +283,14 @@ def get_playlist_tracks(playlist_id: str, title: str = "") -> list[PlaylistTrack
     return search_playlist_tracks(playlist_id) or fallback_playlist_tracks(title or playlist_id)
 
 
-def get_recommended_tracks(search_keywords: list[str]) -> list[RecommendationItem]:
-    keyword = search_keywords[0] if search_keywords else "calm warm music"
-    items = search_youtube(f"{keyword} music", "video", 10)
+def get_recommended_tracks(
+    search_keywords: list[str],
+    mood_tags: list[str],
+    genre: str | None,
+    search_scope: SearchScope = "all",
+) -> list[RecommendationItem]:
+    query = build_youtube_query(search_keywords, mood_tags, genre, search_scope, "music")
+    items = search_youtube(query, "video", 10, search_scope)
 
     if not items:
         return get_mock_recommended_tracks()
@@ -200,9 +305,14 @@ def get_recommended_tracks(search_keywords: list[str]) -> list[RecommendationIte
     ]
 
 
-def get_recommended_playlists(search_keywords: list[str]) -> list[RecommendationItem]:
-    keyword = search_keywords[0] if search_keywords else "calm warm music"
-    items = search_youtube(f"{keyword} playlist", "playlist", 10)
+def get_recommended_playlists(
+    search_keywords: list[str],
+    mood_tags: list[str],
+    genre: str | None,
+    search_scope: SearchScope = "all",
+) -> list[RecommendationItem]:
+    query = build_youtube_query(search_keywords, mood_tags, genre, search_scope, "playlist")
+    items = search_youtube(query, "playlist", 10, search_scope)
 
     if not items:
         return get_mock_recommended_playlists()

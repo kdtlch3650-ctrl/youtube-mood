@@ -1308,3 +1308,44 @@ search_keywords: ['warm comfort jazz music', 'warm comfort jazz playlist', 'soft
 ```
 
 프론트 `npm run build`도 통과했다.
+
+## 2026-05-28 검색 옵션 추가
+
+### 작업 목적
+
+YouTube 추천 결과가 한쪽 언어권으로 고정되지 않도록 사용자가 검색 범위를 선택할 수 있게 한다.
+
+### 작업 내용
+
+- 검색 옵션을 `전체`와 `한국어 중심` 두 가지로 추가했다.
+- 기본값은 기존 동작을 유지하는 `전체`로 설정했다.
+- 프론트 시작 화면과 결과 화면 검색 폼에 검색 옵션 선택 UI를 추가했다.
+- 백엔드 요청 모델에 `search_scope`를 추가했다.
+- `한국어 중심` 선택 시 YouTube 검색 요청에 `regionCode=KR`, `relevanceLanguage=ko`를 적용하도록 했다.
+
+### 현재 판단
+
+검색 옵션은 AI 감정 분석 결과를 바꾸는 기능이 아니다.
+
+같은 감정 분석 결과와 검색 키워드를 사용하되, YouTube API 검색 범위만 조정한다.
+
+## 2026-05-28 한국어 중심 검색어 생성
+
+### 작업 목적
+
+`한국어 중심` 옵션을 선택했을 때 실제 추천 결과 차이가 더 잘 나도록 YouTube 검색어 자체도 한국어 중심으로 만든다.
+
+### 작업 내용
+
+- `한국어 중심` 선택 시 `mood_tags`와 `genre`를 한국어 검색어로 조합하도록 했다.
+- `전체` 선택 시에는 기존 영어 검색어 흐름을 유지했다.
+- YouTube API의 `regionCode=KR`, `relevanceLanguage=ko` 옵션은 유지했다.
+- 검색 옵션만으로 효과가 약했던 이유를 트러블슈팅 문서에 정리했다.
+
+### 확인 예시
+
+```text
+genre: dance
+mood_tags: warm, soft, uplifting, light
+한국어 중심 검색어: 따뜻한 댄스 음악
+```

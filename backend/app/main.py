@@ -30,8 +30,20 @@ def analyze_text(request: AnalyzeRequest) -> AnalyzeResponse:
     analysis = predict_analysis(request.text)
 
     with ThreadPoolExecutor(max_workers=2) as executor:
-        tracks_future = executor.submit(get_recommended_tracks, analysis.search_keywords)
-        playlists_future = executor.submit(get_recommended_playlists, analysis.search_keywords)
+        tracks_future = executor.submit(
+            get_recommended_tracks,
+            analysis.search_keywords,
+            analysis.mood_tags,
+            analysis.genre,
+            request.search_scope,
+        )
+        playlists_future = executor.submit(
+            get_recommended_playlists,
+            analysis.search_keywords,
+            analysis.mood_tags,
+            analysis.genre,
+            request.search_scope,
+        )
         recommended_tracks = tracks_future.result()
         recommended_playlists = playlists_future.result()
 

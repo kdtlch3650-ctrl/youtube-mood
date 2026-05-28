@@ -11,6 +11,8 @@ type AnalyzeResult = {
   recommended_playlists: RecommendationItem[]
 }
 
+type SearchScope = 'all' | 'korean'
+
 type RecommendationTab = 'track' | 'playlist'
 
 type PlaylistTrackItem = {
@@ -139,6 +141,7 @@ function App() {
     velocity: 0,
   })
   const [inputText, setInputText] = useState('')
+  const [searchScope, setSearchScope] = useState<SearchScope>('all')
   const [analysisResult, setAnalysisResult] = useState<AnalyzeResult | null>(null)
   const [playlistTracksById, setPlaylistTracksById] = useState<Record<string, PlaylistTrackItem[]>>({})
   const [selectedTab, setSelectedTab] = useState<RecommendationTab>('track')
@@ -367,7 +370,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: trimmedText }),
+        body: JSON.stringify({ text: trimmedText, search_scope: searchScope }),
       })
 
       if (!response.ok) {
@@ -776,6 +779,23 @@ function App() {
                 placeholder="예: 오늘은 지쳤지만 너무 무거운 음악은 듣고 싶지 않아"
                 rows={5}
               />
+              <div className="search-scope-control" aria-label="검색 옵션">
+                <span>검색 옵션</span>
+                <button
+                  type="button"
+                  className={searchScope === 'all' ? 'active' : ''}
+                  onClick={() => setSearchScope('all')}
+                >
+                  전체
+                </button>
+                <button
+                  type="button"
+                  className={searchScope === 'korean' ? 'active' : ''}
+                  onClick={() => setSearchScope('korean')}
+                >
+                  한국어 중심
+                </button>
+              </div>
               <button type="submit" disabled={!inputText.trim()}>
                 {isLoading ? '분석 중...' : '음악 추천 받기'}
               </button>
@@ -849,6 +869,22 @@ function App() {
                 onChange={(event) => setInputText(event.target.value)}
                 placeholder="현재의 기분을 입력해주세요"
               />
+              <div className="search-scope-control compact" aria-label="검색 옵션">
+                <button
+                  type="button"
+                  className={searchScope === 'all' ? 'active' : ''}
+                  onClick={() => setSearchScope('all')}
+                >
+                  전체
+                </button>
+                <button
+                  type="button"
+                  className={searchScope === 'korean' ? 'active' : ''}
+                  onClick={() => setSearchScope('korean')}
+                >
+                  한국어 중심
+                </button>
+              </div>
               <button type="submit" disabled={!inputText.trim() || isLoading}>
                 {isLoading ? '분석 중' : 'Search'}
               </button>
