@@ -1378,3 +1378,31 @@ trap이라는 말은 봤지만 음악 추천은 아니야
 ```
 
 위 문장은 장르 추천 요청이 아니므로 `trap` 장르로 확정하지 않도록 수정했다.
+
+## 2026-05-28 추천 테스트 스크립트 추가
+
+### 작업 목적
+
+추천 로직을 수정할 때마다 대표 테스트 문장을 반복 확인할 수 있게 한다.
+
+### 작업 내용
+
+- `backend/scripts/check_recommendation_cases.py`를 추가했다.
+- 테스트 스크립트가 `docs/14-recommendation-test-cases.md`의 실행용 테스트 세트를 읽도록 했다.
+- 각 케이스에 대해 장르 추출 결과와 YouTube 검색어 생성 결과를 확인한다.
+- 실제 YouTube API 결과는 외부 데이터에 따라 달라지므로 자동 검증 대상에서 제외했다.
+
+### 실행 방법
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\check_recommendation_cases.py
+```
+
+### 확인 결과
+
+```text
+TOTAL: 16
+PASS: 16
+CHECK: 0
+```

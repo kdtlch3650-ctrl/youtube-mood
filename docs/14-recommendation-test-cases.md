@@ -242,6 +242,13 @@
 메모:
 ```
 
+테스트 스크립트 실행:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\check_recommendation_cases.py
+```
+
 ### 2026-05-28 실행 결과
 
 테스트 방식:
