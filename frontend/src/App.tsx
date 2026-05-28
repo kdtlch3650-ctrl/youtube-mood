@@ -5,6 +5,7 @@ type AnalyzeResult = {
   input_text: string
   emotions: string[]
   mood_tags: string[]
+  genre?: string | null
   search_keywords: string[]
   recommended_tracks: RecommendationItem[]
   recommended_playlists: RecommendationItem[]
@@ -198,7 +199,12 @@ function App() {
       ? activePlaylistTrack?.url || activeRecommendation?.url
       : activeRecommendation?.url
   const moodHighlights = Array.from(
-    new Map((analysisResult?.mood_tags ?? []).map((tag) => [tag.toLowerCase(), tag])).values(),
+    new Map(
+      [
+        ...(analysisResult?.genre ? [analysisResult.genre] : []),
+        ...(analysisResult?.mood_tags ?? []),
+      ].map((tag) => [tag.toLowerCase(), tag]),
+    ).values(),
   ).slice(0, 4)
 
   useEffect(() => {

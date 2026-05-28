@@ -39,6 +39,7 @@ def analyze_text(request: AnalyzeRequest) -> AnalyzeResponse:
         input_text=analysis.input_text,
         emotions=analysis.emotions,
         mood_tags=analysis.mood_tags,
+        genre=analysis.genre,
         search_keywords=analysis.search_keywords,
         recommended_tracks=recommended_tracks,
         recommended_playlists=recommended_playlists,

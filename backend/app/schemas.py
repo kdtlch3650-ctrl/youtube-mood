@@ -26,6 +26,7 @@ class AnalyzeResponse(BaseModel):
     input_text: str
     emotions: list[str]
     mood_tags: list[str]
+    genre: str | None = None
     search_keywords: list[str]
     recommended_tracks: list[RecommendationItem]
     recommended_playlists: list[RecommendationItem]

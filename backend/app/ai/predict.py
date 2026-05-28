@@ -1,4 +1,5 @@
 from app.ai.model import load_model
+from app.ai.genre_mapping import extract_genre
 from app.ai.mood_mapping import adjust_mood_tags_by_text, build_mood_tags, build_search_keywords
 from app.ai.preprocess import preprocess_text
 from app.ai.schema import AnalysisResult
@@ -16,14 +17,16 @@ def predict_analysis(text: str) -> AnalysisResult:
     emotions = predicted.get("emotions", [])
     mood_tags = predicted.get("mood_tags") or build_mood_tags(emotions)
     mood_tags = adjust_mood_tags_by_text(mood_tags, cleaned_text)
+    genre = extract_genre(cleaned_text)
 
     # 4. 검색용 키워드를 만든다.
-    search_keywords = build_search_keywords(emotions, mood_tags)
+    search_keywords = build_search_keywords(emotions, mood_tags, genre)
 
     # 5. 프론트와 백엔드가 함께 쓸 수 있는 형태로 반환한다.
     return AnalysisResult(
         input_text=cleaned_text,
         emotions=emotions,
         mood_tags=mood_tags,
+        genre=genre,
         search_keywords=search_keywords,
     )

@@ -49,6 +49,17 @@ SEARCH_KEYWORDS_BY_MOOD: dict[str, str] = {
     "minimal": "minimal focus music",
 }
 
+GENRE_SEARCH_PHRASES_BY_MOOD: dict[str, str] = {
+    "soft": "soft",
+    "quiet": "quiet calm",
+    "warm": "warm comfort",
+    "late night": "late night",
+    "heavy": "heavy cathartic",
+    "uplifting": "uplifting",
+    "light": "light feel good",
+    "minimal": "minimal focus",
+}
+
 TEXT_MOOD_ADJUSTMENTS = [
     {
         "avoid_keywords": ["무거운", "무겁", "어두운", "어둡", "강한", "격한"],
@@ -109,20 +120,36 @@ def adjust_mood_tags_by_text(mood_tags: list[str], text: str) -> list[str]:
     return unique_values(adjusted_tags)[:4]
 
 
-def build_search_keywords(emotions: list[str], mood_tags: list[str]) -> list[str]:
+def build_search_keywords(
+    emotions: list[str],
+    mood_tags: list[str],
+    genre: str | None = None,
+) -> list[str]:
     keywords = []
 
-    for mood_tag in mood_tags:
-        keyword = SEARCH_KEYWORDS_BY_MOOD.get(mood_tag)
+    if genre:
+        for mood_tag in mood_tags:
+            phrase = GENRE_SEARCH_PHRASES_BY_MOOD.get(mood_tag)
 
-        if keyword:
-            keywords.append(keyword)
+            if phrase:
+                keywords.append(f"{phrase} {genre} music")
+                keywords.append(f"{phrase} {genre} playlist")
+    else:
+        for mood_tag in mood_tags:
+            keyword = SEARCH_KEYWORDS_BY_MOOD.get(mood_tag)
+
+            if keyword:
+                keywords.append(keyword)
 
     # KOTE 라벨 자체가 검색에 도움 되는 경우를 대비해 마지막 후보로 감정 기반 검색어를 추가한다.
     for emotion in emotions:
-        keywords.append(f"{emotion} mood music")
+        if genre:
+            keywords.append(f"{emotion} {genre} music")
+        else:
+            keywords.append(f"{emotion} mood music")
 
     if not keywords:
-        keywords.append("relaxing music playlist")
+        fallback_keyword = f"relaxing {genre} music" if genre else "relaxing music playlist"
+        keywords.append(fallback_keyword)
 
     return unique_values(keywords)[:3]

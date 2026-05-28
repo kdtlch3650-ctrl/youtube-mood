@@ -1276,3 +1276,35 @@ search_keywords: ['soft emotional music', 'light feel good music', 'quiet calm p
 - `npm run lint`를 통과했다.
 - `npm run build`를 통과했다.
 - Vite 개발 서버에 HMR로 수정이 반영됐다.
+
+## 2026-05-28 자연어 입력 장르 반영
+
+### 작업 목적
+
+사용자가 자연어 문장에 장르를 직접 입력했을 때, 감정 추천 방향은 유지하면서 YouTube 검색어에 해당 장르가 반영되도록 한다.
+
+### 작업 내용
+
+- `genre_mapping.py`를 추가해 대표 장르 키워드를 추출하도록 했다.
+- 감정 분석 결과에 `genre` 필드를 추가했다.
+- 검색어 생성 시 장르가 있으면 `soft jazz music`처럼 분위기 태그와 장르를 함께 조합하도록 했다.
+- 프론트 Mood 영역에서도 감지된 장르를 함께 확인할 수 있게 했다.
+- 트러블슈팅 문서에 장르를 AI 감정 모델이 아니라 별도 규칙으로 처리한 이유를 정리했다.
+
+### 확인 결과
+
+입력 문장:
+
+```text
+오늘 좀 지치는데 너무 우울하지 않은 재즈 음악 듣고 싶어
+```
+
+API 응답 일부:
+
+```text
+genre: jazz
+mood_tags: ['warm', 'soft', 'uplifting', 'light']
+search_keywords: ['warm comfort jazz music', 'warm comfort jazz playlist', 'soft jazz music']
+```
+
+프론트 `npm run build`도 통과했다.
