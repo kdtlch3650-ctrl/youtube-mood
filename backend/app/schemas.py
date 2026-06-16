@@ -33,3 +33,24 @@ class AnalyzeResponse(BaseModel):
     search_keywords: list[str]
     recommended_tracks: list[RecommendationItem]
     recommended_playlists: list[RecommendationItem]
+
+
+class SearchRecordItem(BaseModel):
+    id: str
+    title: str
+    channel_title: str
+    url: str
+    thumbnail_url: str
+
+
+class SearchRecord(BaseModel):
+    id: str
+    created_at: str
+    input_text: str
+    search_scope: Literal["all", "korean"]
+    emotions: list[str]
+    mood_tags: list[str]
+    genre: str | None = None
+    search_keywords: list[str]
+    recommended_tracks: list[SearchRecordItem]
+    recommended_playlists: list[SearchRecordItem]
