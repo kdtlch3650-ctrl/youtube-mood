@@ -82,8 +82,11 @@ const samplePlaylistTracks = [
   '네 번째 추천 트랙',
   '다섯 번째 추천 트랙',
 ]
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '')
 const YOUTUBE_IFRAME_API_URL = 'https://www.youtube.com/iframe_api'
 const YOUTUBE_PLAYER_ELEMENT_ID = 'youtube-player-anchor'
+
+const apiUrl = (path: string) => `${API_BASE_URL}${path}`
 
 const getYoutubeVideoId = (url: string) => {
   try {
@@ -238,7 +241,7 @@ function App() {
     const loadPlaylistTracks = async () => {
       try {
         const response = await fetch(
-          `http://127.0.0.1:8000/api/playlists/${encodeURIComponent(activePlaylist.id)}/tracks?${query.toString()}`,
+          apiUrl(`/api/playlists/${encodeURIComponent(activePlaylist.id)}/tracks?${query.toString()}`),
           { signal: abortController.signal },
         )
 
@@ -365,7 +368,7 @@ function App() {
     setErrorMessage('')
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/analyze', {
+      const response = await fetch(apiUrl('/api/analyze'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
