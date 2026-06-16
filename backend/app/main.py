@@ -1,14 +1,19 @@
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+from itertools import count
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.ai.predict import predict_analysis
 from app.schemas import AnalyzeRequest, AnalyzeResponse, PlaylistTrackItem, SearchRecord
-from app.search_records import create_search_record, list_search_records
+from app.search_record_factory import build_search_record
+from app.search_record_store import list_search_records, save_search_record
 from app.youtube import get_playlist_tracks, get_recommended_playlists, get_recommended_tracks
 
 app = FastAPI(title="YouTube Mood Recommendation API")
+
+_record_sequence = count(1)
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,10 +61,16 @@ def _build_analyze_response(request: AnalyzeRequest) -> AnalyzeResponse:
     )
 
 
+def _create_record(response: AnalyzeResponse, search_scope: str) -> SearchRecord:
+    record_id = f"record-{next(_record_sequence)}"
+    created_at = datetime.now(timezone.utc).isoformat()
+    return build_search_record(record_id, created_at, response, search_scope)
+
+
 @app.post("/api/analyze")
 def analyze_text(request: AnalyzeRequest) -> AnalyzeResponse:
     response = _build_analyze_response(request)
-    create_search_record(response, request.search_scope)
+    save_search_record(_create_record(response, request.search_scope))
     return response
 
 

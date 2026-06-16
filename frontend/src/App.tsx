@@ -11,9 +11,31 @@ type AnalyzeResult = {
   recommended_playlists: RecommendationItem[]
 }
 
+type SearchRecordItem = {
+  id: string
+  title: string
+  channel_title: string
+  url: string
+  thumbnail_url: string
+}
+
+type SearchRecord = {
+  id: string
+  created_at: string
+  input_text: string
+  search_scope: SearchScope
+  emotions: string[]
+  mood_tags: string[]
+  genre?: string | null
+  search_keywords: string[]
+  recommended_tracks: SearchRecordItem[]
+  recommended_playlists: SearchRecordItem[]
+}
+
 type SearchScope = 'all' | 'korean'
 
 type RecommendationTab = 'track' | 'playlist'
+type ScreenMode = 'search' | 'history'
 
 type PlaylistTrackItem = {
   title: string
@@ -145,7 +167,10 @@ function App() {
   })
   const [inputText, setInputText] = useState('')
   const [searchScope, setSearchScope] = useState<SearchScope>('all')
+  const [screenMode, setScreenMode] = useState<ScreenMode>('search')
   const [analysisResult, setAnalysisResult] = useState<AnalyzeResult | null>(null)
+  const [searchRecords, setSearchRecords] = useState<SearchRecord[]>([])
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [playlistTracksById, setPlaylistTracksById] = useState<Record<string, PlaylistTrackItem[]>>({})
   const [selectedTab, setSelectedTab] = useState<RecommendationTab>('track')
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
@@ -158,8 +183,11 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const isResultView = Boolean(analysisResult)
+  const isHistoryView = screenMode === 'history'
   const recommendedTracks = analysisResult?.recommended_tracks ?? []
   const recommendedPlaylists = analysisResult?.recommended_playlists ?? []
+  const selectedRecord =
+    searchRecords.find((record) => record.id === selectedRecordId) ?? searchRecords[0] ?? null
   const activeTrack =
     recommendedTracks.find((track) => track.id === selectedTrackId) ?? recommendedTracks[0]
   const activePlaylist =
@@ -210,8 +238,42 @@ function App() {
         ...(analysisResult?.genre ? [analysisResult.genre] : []),
         ...(analysisResult?.mood_tags ?? []),
       ].map((tag) => [tag.toLowerCase(), tag]),
-    ).values(),
+  ).values(),
   ).slice(0, 4)
+
+  useEffect(() => {
+    if (!isHistoryView) {
+      return
+    }
+
+    const abortController = new AbortController()
+
+    const loadSearchRecords = async () => {
+      try {
+        const response = await fetch(apiUrl('/api/search-records'), {
+          signal: abortController.signal,
+        })
+
+        if (!response.ok) {
+          return
+        }
+
+        const records: SearchRecord[] = await response.json()
+        setSearchRecords(records)
+        setSelectedRecordId((currentId) => currentId ?? records[0]?.id ?? null)
+      } catch (error) {
+        if (!abortController.signal.aborted) {
+          console.error(error)
+        }
+      }
+    }
+
+    void loadSearchRecords()
+
+    return () => {
+      abortController.abort()
+    }
+  }, [isHistoryView])
 
   useEffect(() => {
     playlistTrackItemRefs.current = playlistTrackItemRefs.current.slice(0, playlistTrackItems.length)
@@ -364,6 +426,7 @@ function App() {
       return
     }
 
+    setScreenMode('search')
     setIsLoading(true)
     setErrorMessage('')
 
@@ -401,6 +464,14 @@ function App() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     void analyzeMoodText(inputText)
+  }
+
+  const openSearchMode = () => {
+    setScreenMode('search')
+  }
+
+  const openHistoryMode = () => {
+    setScreenMode('history')
   }
 
   const startDrag = (event: React.PointerEvent<HTMLDivElement>, rail: HTMLDivElement | null) => {
@@ -761,11 +832,159 @@ function App() {
     setIsPlayerActive(true)
   }
 
+  if (isHistoryView) {
+    return (
+      <main className="app-shell">
+        <section className="history-screen">
+          <div className="history-header">
+            <div>
+              <p className="eyebrow">Search records</p>
+              <h1>이전 검색 기록</h1>
+              <p className="intro-copy">
+                사용자가 입력한 문장과 추천 결과를 다시 볼 수 있는 화면입니다.
+              </p>
+            </div>
+            <div className="history-actions">
+              <button type="button" className="secondary-button" onClick={openSearchMode}>
+                검색 화면으로
+              </button>
+            </div>
+          </div>
+
+          <div className="history-layout">
+            <aside className="history-list-panel">
+              <h2>최근 기록</h2>
+              <div className="history-list">
+                {searchRecords.length ? (
+                  searchRecords.map((record) => (
+                    <button
+                      type="button"
+                      key={record.id}
+                      className={record.id === selectedRecord?.id ? 'history-item active' : 'history-item'}
+                      onClick={() => setSelectedRecordId(record.id)}
+                    >
+                      <span className="history-item-title">{record.input_text}</span>
+                      <span className="history-item-meta">
+                        {record.emotions.slice(0, 2).join(', ') || '분석 없음'}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="empty-state">
+                    <h3>아직 기록이 없습니다</h3>
+                    <p>검색 화면에서 문장을 입력하면 여기에 기록이 쌓입니다.</p>
+                  </div>
+                )}
+              </div>
+            </aside>
+
+            <section className="history-detail-panel">
+              {selectedRecord ? (
+                <>
+                  <div className="history-detail-header">
+                    <div>
+                      <p className="card-type">Record detail</p>
+                      <h2>{selectedRecord.input_text}</h2>
+                      <p className="channel-name">
+                        {new Date(selectedRecord.created_at).toLocaleString('ko-KR')}
+                      </p>
+                    </div>
+                    <div className="history-badges">
+                      <span>{selectedRecord.search_scope === 'korean' ? '한국어 중심' : '전체'}</span>
+                      {selectedRecord.genre && <span>{selectedRecord.genre}</span>}
+                    </div>
+                  </div>
+
+                  <div className="history-tags">
+                    <div>
+                      <h3>감정</h3>
+                      <div className="history-tag-list">
+                        {selectedRecord.emotions.map((emotion) => (
+                          <span key={emotion}>{emotion}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h3>키워드</h3>
+                      <div className="history-tag-list">
+                        {selectedRecord.mood_tags.map((tag) => (
+                          <span key={tag}>{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h3>검색어</h3>
+                      <div className="history-tag-list">
+                        {selectedRecord.search_keywords.map((keyword) => (
+                          <span key={keyword}>{keyword}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="history-columns">
+                    <div>
+                      <h3>추천 곡</h3>
+                      <div className="history-result-grid">
+                        {selectedRecord.recommended_tracks.map((item) => (
+                          <a
+                            className="history-result-card"
+                            href={item.url}
+                            key={item.id}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {item.thumbnail_url ? <img src={item.thumbnail_url} alt="" /> : <span />}
+                            <strong>{item.title}</strong>
+                            <span>{item.channel_title}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3>추천 플레이리스트</h3>
+                      <div className="history-result-grid">
+                        {selectedRecord.recommended_playlists.map((item) => (
+                          <a
+                            className="history-result-card"
+                            href={item.url}
+                            key={item.id}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {item.thumbnail_url ? <img src={item.thumbnail_url} alt="" /> : <span />}
+                            <strong>{item.title}</strong>
+                            <span>{item.channel_title}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="empty-state large">
+                  <h3>기록을 선택해 주세요</h3>
+                  <p>왼쪽 목록에서 하나를 선택하면 상세 내용을 볼 수 있습니다.</p>
+                </div>
+              )}
+            </section>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className="app-shell">
       {!isResultView ? (
         <section className="start-screen" aria-labelledby="service-title">
           <div className="start-card">
+            <div className="screen-switcher">
+              <button type="button" className="secondary-button" onClick={openHistoryMode}>
+                기록 보기
+              </button>
+            </div>
             <p className="eyebrow">Mood based music recommendation</p>
             <h1 id="service-title">오늘의 감정에 맞는 음악을 찾습니다</h1>
             <p className="intro-copy">
@@ -810,6 +1029,9 @@ function App() {
         <section className="music-dashboard" aria-labelledby="result-title">
           <aside className="dashboard-sidebar">
             <p className="sidebar-logo">Moodify</p>
+            <button type="button" className="secondary-button sidebar-history-button" onClick={openHistoryMode}>
+              기록 보기
+            </button>
             <nav className="recommendation-tabs" aria-label="추천 유형">
               <button
                 type="button"

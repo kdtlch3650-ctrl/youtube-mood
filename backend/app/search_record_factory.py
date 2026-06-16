@@ -1,15 +1,4 @@
-from datetime import datetime, timezone
-from itertools import count
-
 from app.schemas import AnalyzeResponse, SearchRecord, SearchRecordItem
-
-_record_sequence = count(1)
-_search_records: list[SearchRecord] = []
-_MAX_RECORDS = 100
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _to_record_item(item: object) -> SearchRecordItem:
@@ -22,10 +11,16 @@ def _to_record_item(item: object) -> SearchRecordItem:
     )
 
 
-def create_search_record(response: AnalyzeResponse, search_scope: str) -> SearchRecord:
-    record = SearchRecord(
-        id=f"record-{next(_record_sequence)}",
-        created_at=_now_iso(),
+def build_search_record(
+    record_id: str,
+    created_at: str,
+    response: AnalyzeResponse,
+    search_scope: str,
+) -> SearchRecord:
+    # OpenSearch 문서로 바로 옮길 수 있도록 기록 객체를 먼저 만든다.
+    return SearchRecord(
+        id=record_id,
+        created_at=created_at,
         input_text=response.input_text,
         search_scope=search_scope,  # type: ignore[arg-type]
         emotions=response.emotions,
@@ -35,11 +30,3 @@ def create_search_record(response: AnalyzeResponse, search_scope: str) -> Search
         recommended_tracks=[_to_record_item(item) for item in response.recommended_tracks],
         recommended_playlists=[_to_record_item(item) for item in response.recommended_playlists],
     )
-
-    _search_records.append(record)
-    del _search_records[:-_MAX_RECORDS]
-    return record
-
-
-def list_search_records() -> list[SearchRecord]:
-    return list(reversed(_search_records))
