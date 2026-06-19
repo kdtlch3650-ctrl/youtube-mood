@@ -139,7 +139,7 @@
 }
 
 .search-dashboard {
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 224px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
 }
 
@@ -154,7 +154,7 @@
 .search-sidebar,
 .history-sidebar {
   min-width: 0;
-  width: 320px;
+  width: 224px;
 }
 
 .search-sidebar .recommendation-tabs {
@@ -349,7 +349,7 @@
   align-items: stretch;
   display: grid;
   gap: 34px;
-  grid-template-columns: minmax(0, 2.35fr) minmax(180px, 0.35fr);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   min-height: 0;
 }
 
@@ -988,7 +988,7 @@
 }
 
 .history-dashboard {
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 224px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   min-height: calc(100svh - 68px);
   overflow: hidden;

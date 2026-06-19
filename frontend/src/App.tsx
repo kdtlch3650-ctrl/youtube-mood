@@ -1367,7 +1367,6 @@ function App() {
               </button>
             </form>
 
-            {renderRecommendationTabs()}
             <section className="recommendation-area" aria-label="추천 음악 결과">
               <h1 id="result-title">{selectedTab === 'track' ? 'Explore new' : 'Playlists'}</h1>
               {selectedTab === 'track' ? (
