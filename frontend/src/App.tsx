@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import './App.css'
 
 type AnalyzeResult = {
@@ -17,6 +17,8 @@ type SearchRecordItem = {
   channel_title: string
   url: string
   thumbnail_url: string
+  reason?: string
+  playlist_tracks?: PlaylistTrackItem[]
 }
 
 type SearchRecord = {
@@ -36,6 +38,12 @@ type SearchScope = 'all' | 'korean'
 
 type RecommendationTab = 'track' | 'playlist'
 type ScreenMode = 'search' | 'history'
+type KeywordTooltipState = {
+  label: string
+  top: number
+  left: number
+  value: string
+} | null
 
 type PlaylistTrackItem = {
   title: string
@@ -50,7 +58,7 @@ type RecommendationItem = {
   channel_title: string
   url: string
   thumbnail_url: string
-  reason: string
+  reason?: string
   playlist_tracks?: PlaylistTrackItem[]
 }
 
@@ -182,16 +190,22 @@ function App() {
   const [isYoutubeApiReady, setIsYoutubeApiReady] = useState(() => Boolean(window.YT?.Player))
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [keywordTooltip, setKeywordTooltip] = useState<KeywordTooltipState>(null)
   const isResultView = Boolean(analysisResult)
   const isHistoryView = screenMode === 'history'
   const recommendedTracks = analysisResult?.recommended_tracks ?? []
   const recommendedPlaylists = analysisResult?.recommended_playlists ?? []
   const selectedRecord =
     searchRecords.find((record) => record.id === selectedRecordId) ?? searchRecords[0] ?? null
-  const activeTrack =
-    recommendedTracks.find((track) => track.id === selectedTrackId) ?? recommendedTracks[0]
+  const currentTracks: RecommendationItem[] = isHistoryView
+    ? selectedRecord?.recommended_tracks ?? []
+    : recommendedTracks
+  const currentPlaylists: RecommendationItem[] = isHistoryView
+    ? selectedRecord?.recommended_playlists ?? []
+    : recommendedPlaylists
+  const activeTrack = currentTracks.find((track) => track.id === selectedTrackId) ?? currentTracks[0]
   const activePlaylist =
-    recommendedPlaylists.find((playlist) => playlist.id === selectedPlaylistId) ?? recommendedPlaylists[0]
+    currentPlaylists.find((playlist) => playlist.id === selectedPlaylistId) ?? currentPlaylists[0]
   const activeRecommendation = selectedTab === 'track' ? activeTrack : activePlaylist
   const activeVideoId = activeTrack
     ? getYoutubeVideoId(activeTrack.url) ?? (activeTrack.id.startsWith('track-') ? null : activeTrack.id)
@@ -466,6 +480,42 @@ function App() {
     void analyzeMoodText(inputText)
   }
 
+  const getKeywordTooltipPosition = (clientX: number, clientY: number) => {
+    const width = 280
+    const height = 140
+    const margin = 16
+    const left = Math.min(clientX + 18, window.innerWidth - width - margin)
+    const top = Math.min(clientY + 18, window.innerHeight - height - margin)
+
+    return {
+      left: Math.max(margin, left),
+      top: Math.max(margin, top),
+    }
+  }
+
+  const openKeywordTooltip = (label: string, value: string, event: MouseEvent<HTMLDivElement>) => {
+    const position = getKeywordTooltipPosition(event.clientX, event.clientY)
+    setKeywordTooltip({ label, value, ...position })
+  }
+
+  const moveKeywordTooltip = (value: string, event: MouseEvent<HTMLDivElement>) => {
+    setKeywordTooltip((current) => {
+      if (!current) {
+        return current
+      }
+
+      return {
+        ...current,
+        value,
+        ...getKeywordTooltipPosition(event.clientX, event.clientY),
+      }
+    })
+  }
+
+  const closeKeywordTooltip = () => {
+    setKeywordTooltip(null)
+  }
+
   const openSearchMode = () => {
     setScreenMode('search')
   }
@@ -473,6 +523,163 @@ function App() {
   const openHistoryMode = () => {
     setScreenMode('history')
   }
+
+  const renderRecommendationTabs = (layout: 'inline' | 'sidebar' = 'inline') => (
+    <nav
+      className={layout === 'sidebar' ? 'recommendation-tabs' : 'recommendation-tabs recommendation-tabs-inline'}
+      aria-label="추천 유형"
+    >
+      <button type="button" className={selectedTab === 'track' ? 'active' : ''} onClick={() => setSelectedTab('track')}>
+        <span className="tab-icon" aria-hidden="true">
+          ♬
+        </span>
+        추천 곡
+      </button>
+      <button
+        type="button"
+        className={selectedTab === 'playlist' ? 'active' : ''}
+        onClick={() => setSelectedTab('playlist')}
+      >
+        <span className="tab-icon" aria-hidden="true">
+          ≡
+        </span>
+        플레이리스트
+      </button>
+    </nav>
+  )
+
+  const renderHistorySidebar = () => (
+    <aside className="dashboard-sidebar history-sidebar">
+      <div className="history-sidebar-top">
+        <button type="button" className="sidebar-logo-button" onClick={openSearchMode}>
+          Moodify
+        </button>
+        <button type="button" className="sidebar-history-button" onClick={openSearchMode}>
+          검색으로 돌아가기
+        </button>
+      </div>
+      {renderRecommendationTabs('sidebar')}
+      <div className="history-rail">
+        <h2>최근 기록</h2>
+        <div className="history-list-scroll">
+          <div className="history-list">
+            {searchRecords.length ? (
+              searchRecords.map((record) => (
+                <button
+                  type="button"
+                  key={record.id}
+                  className={record.id === selectedRecord?.id ? 'history-item active' : 'history-item'}
+                  onClick={() => setSelectedRecordId(record.id)}
+                >
+                  <span className="history-item-title">{record.input_text}</span>
+                  <span className="history-item-meta">
+                    {new Date(record.created_at).toLocaleString('ko-KR')}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <div className="empty-state compact">
+                <h3>아직 기록이 없습니다</h3>
+                <p>검색 화면에서 문장을 입력하면 여기에 기록이 쌓입니다.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </aside>
+  )
+
+  const renderPlayerBar = () => (
+    <footer className="player-bar" aria-label="YouTube player">
+      <div className="player-bar-row">
+        <div className="player-controls-shell">
+          <button
+            type="button"
+            onClick={() => (selectedTab === 'playlist' ? stepPlaylistTrack('previous') : selectTrackByOffset(-1))}
+            aria-label={selectedTab === 'playlist' ? '플레이리스트 이전 곡' : '이전 추천 곡'}
+          >
+            <span aria-hidden="true">⏮</span>
+          </button>
+          <button
+            type="button"
+            className="player-main-button"
+            onClick={togglePlayer}
+            disabled={
+              (selectedTab === 'track'
+                ? !activeVideoId
+                : !playlistTrackItems[currentPlaylistTrackIndex]?.video_id) || !isYoutubeApiReady
+            }
+            aria-label={
+              isPlayerActive
+                ? '재생 중지'
+                : selectedTab === 'track'
+                  ? '선택한 곡 재생'
+                  : '선택한 플레이리스트 재생'
+            }
+          >
+            <span aria-hidden="true">{isPlayerActive ? '⏸' : '▶'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => (selectedTab === 'playlist' ? stepPlaylistTrack('next') : selectTrackByOffset(1))}
+            aria-label={selectedTab === 'playlist' ? '플레이리스트 다음 곡' : '다음 추천 곡'}
+          >
+            <span aria-hidden="true">⏭</span>
+          </button>
+        </div>
+
+        <div id={YOUTUBE_PLAYER_ELEMENT_ID} className="youtube-audio-frame" />
+        <div className="player-volume" aria-hidden="true">
+          <span aria-hidden="true">🔊</span>
+        </div>
+
+        <div className="player-track-info">
+          {selectedTab === 'playlist' ? (
+            <>
+              {selectedCardImage && <img src={selectedCardImage} alt="" />}
+              <div className="player-track-copy">
+                <p>{selectedCardTitle}</p>
+                <span>{selectedCardSubtitle}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              {activeRecommendation?.thumbnail_url && <img src={activeRecommendation.thumbnail_url} alt="" />}
+              <div>
+                <p>{activeRecommendation?.title}</p>
+                <span>{activeRecommendation?.channel_title}</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div
+          className="player-progress"
+          aria-label="재생 위치 조절"
+          role="slider"
+          tabIndex={0}
+          aria-valuemin={0}
+          aria-valuemax={Math.max(duration, 0)}
+          aria-valuenow={Math.min(currentTime, duration)}
+          onPointerCancel={(event) => stopProgressDrag(event, progressBarRef.current)}
+          onPointerDown={(event) => startProgressDrag(event, progressBarRef.current)}
+          onPointerLeave={(event) => stopProgressDrag(event, progressBarRef.current)}
+          onPointerMove={(event) => moveProgressDrag(event, progressBarRef.current)}
+          onPointerUp={(event) => stopProgressDrag(event, progressBarRef.current)}
+        >
+          <span>{formatTime(currentTime)}</span>
+          <div className="player-progress-bar" ref={progressBarRef}>
+            <i style={{ width: `${progressPercent}%` }} />
+          </div>
+          <span>{formatTime(duration)}</span>
+        </div>
+
+        <a href={activeRecommendation?.url} target="_blank" rel="noreferrer">
+          YouTube
+        </a>
+      </div>
+    </footer>
+  )
 
   const startDrag = (event: React.PointerEvent<HTMLDivElement>, rail: HTMLDivElement | null) => {
     if (!rail) {
@@ -752,17 +959,17 @@ function App() {
   }
 
   const selectTrackByOffset = (offset: number) => {
-    if (!recommendedTracks.length) {
+    if (!currentTracks.length) {
       return
     }
 
     const currentIndex = activeTrack
-      ? recommendedTracks.findIndex((track) => track.id === activeTrack.id)
+      ? currentTracks.findIndex((track) => track.id === activeTrack.id)
       : 0
-    const nextIndex = (currentIndex + offset + recommendedTracks.length) % recommendedTracks.length
+    const nextIndex = (currentIndex + offset + currentTracks.length) % currentTracks.length
 
     setSelectedTab('track')
-    setSelectedTrackId(recommendedTracks[nextIndex].id)
+    setSelectedTrackId(currentTracks[nextIndex].id)
     setCurrentTime(0)
     setDuration(0)
   }
@@ -835,147 +1042,215 @@ function App() {
   if (isHistoryView) {
     return (
       <main className="app-shell">
-        <section className="history-screen">
-          <div className="history-header">
-            <div>
-              <p className="eyebrow">Search records</p>
-              <h1>이전 검색 기록</h1>
-              <p className="intro-copy">
-                사용자가 입력한 문장과 추천 결과를 다시 볼 수 있는 화면입니다.
-              </p>
-            </div>
-            <div className="history-actions">
+        <section className="music-dashboard history-dashboard" aria-labelledby="history-title">
+          {renderHistorySidebar()}
+          <section className="dashboard-main history-main">
+            <div className="screen-toolbar">
+              <div>
+                <p className="eyebrow">Search records</p>
+                <h1 id="history-title">기록 보기</h1>
+              </div>
               <button type="button" className="secondary-button" onClick={openSearchMode}>
                 검색 화면으로
               </button>
             </div>
-          </div>
-
-          <div className="history-layout">
-            <aside className="history-list-panel">
-              <h2>최근 기록</h2>
-              <div className="history-list">
-                {searchRecords.length ? (
-                  searchRecords.map((record) => (
-                    <button
-                      type="button"
-                      key={record.id}
-                      className={record.id === selectedRecord?.id ? 'history-item active' : 'history-item'}
-                      onClick={() => setSelectedRecordId(record.id)}
-                    >
-                      <span className="history-item-title">{record.input_text}</span>
-                      <span className="history-item-meta">
-                        {record.emotions.slice(0, 2).join(', ') || '분석 없음'}
-                      </span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="empty-state">
-                    <h3>아직 기록이 없습니다</h3>
-                    <p>검색 화면에서 문장을 입력하면 여기에 기록이 쌓입니다.</p>
-                  </div>
-                )}
+            <div className="history-summary-card">
+              <div className="history-summary-head">
+                <span
+                  className="record-scope-icon"
+                  aria-label={selectedRecord?.search_scope === 'korean' ? '한국어 중심' : '전체'}
+                >
+                  {selectedRecord?.search_scope === 'korean' ? '🇰🇷' : '🌐'}
+                </span>
+                <span className="record-meta-time">
+                  {selectedRecord ? new Date(selectedRecord.created_at).toLocaleString('ko-KR') : '최근 기록 없음'}
+                </span>
+                {selectedRecord?.genre && <span className="record-meta-genre">{selectedRecord.genre}</span>}
               </div>
-            </aside>
-
-            <section className="history-detail-panel">
-              {selectedRecord ? (
-                <>
-                  <div className="history-detail-header">
-                    <div>
-                      <p className="card-type">Record detail</p>
-                      <h2>{selectedRecord.input_text}</h2>
-                      <p className="channel-name">
-                        {new Date(selectedRecord.created_at).toLocaleString('ko-KR')}
-                      </p>
+              <p>{selectedRecord?.input_text ?? '기록을 선택해 주세요'}</p>
+            </div>
+            {renderRecommendationTabs()}
+            <section className="recommendation-area" aria-label="기록 추천 결과">
+              <h1 id="history-result-title">{selectedTab === 'track' ? 'Explore new' : 'Playlists'}</h1>
+              {selectedTab === 'track' ? (
+                <div
+                  className="track-grid draggable-rail"
+                  ref={trackRailRef}
+                  onPointerCancel={(event) => stopDrag(event, trackRailRef.current)}
+                  onPointerDown={(event) => startDrag(event, trackRailRef.current)}
+                  onPointerLeave={(event) => stopDrag(event, trackRailRef.current)}
+                  onPointerMove={(event) => moveDrag(event, trackRailRef.current)}
+                  onPointerUp={(event) => stopDrag(event, trackRailRef.current)}
+                >
+                  {currentTracks.map((track) => (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className={`track-card ${activeTrack?.id === track.id ? 'active' : ''}`}
+                      key={track.id}
+                      onClick={() => selectTrackOnClick(track.id)}
+                      onPointerDown={rememberCardPressStart}
+                      onPointerUp={(event) => selectTrackOnPointerUp(event, track.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          selectTrack(track.id)
+                        }
+                      }}
+                    >
+                      {track.thumbnail_url && <img src={track.thumbnail_url} alt="" />}
+                      <h3>{track.title}</h3>
+                      <p>{track.channel_title}</p>
                     </div>
-                    <div className="history-badges">
-                      <span>{selectedRecord.search_scope === 'korean' ? '한국어 중심' : '전체'}</span>
-                      {selectedRecord.genre && <span>{selectedRecord.genre}</span>}
-                    </div>
-                  </div>
-
-                  <div className="history-tags">
-                    <div>
-                      <h3>감정</h3>
-                      <div className="history-tag-list">
-                        {selectedRecord.emotions.map((emotion) => (
-                          <span key={emotion}>{emotion}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <h3>키워드</h3>
-                      <div className="history-tag-list">
-                        {selectedRecord.mood_tags.map((tag) => (
-                          <span key={tag}>{tag}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <h3>검색어</h3>
-                      <div className="history-tag-list">
-                        {selectedRecord.search_keywords.map((keyword) => (
-                          <span key={keyword}>{keyword}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="history-columns">
-                    <div>
-                      <h3>추천 곡</h3>
-                      <div className="history-result-grid">
-                        {selectedRecord.recommended_tracks.map((item) => (
-                          <a
-                            className="history-result-card"
-                            href={item.url}
-                            key={item.id}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {item.thumbnail_url ? <img src={item.thumbnail_url} alt="" /> : <span />}
-                            <strong>{item.title}</strong>
-                            <span>{item.channel_title}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3>추천 플레이리스트</h3>
-                      <div className="history-result-grid">
-                        {selectedRecord.recommended_playlists.map((item) => (
-                          <a
-                            className="history-result-card"
-                            href={item.url}
-                            key={item.id}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {item.thumbnail_url ? <img src={item.thumbnail_url} alt="" /> : <span />}
-                            <strong>{item.title}</strong>
-                            <span>{item.channel_title}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </>
+                  ))}
+                </div>
               ) : (
-                <div className="empty-state large">
-                  <h3>기록을 선택해 주세요</h3>
-                  <p>왼쪽 목록에서 하나를 선택하면 상세 내용을 볼 수 있습니다.</p>
+                <div
+                  className="playlist-card-grid draggable-rail"
+                  ref={playlistRailRef}
+                  onPointerCancel={(event) => stopDrag(event, playlistRailRef.current)}
+                  onPointerDown={(event) => startDrag(event, playlistRailRef.current)}
+                  onPointerLeave={(event) => stopDrag(event, playlistRailRef.current)}
+                  onPointerMove={(event) => moveDrag(event, playlistRailRef.current)}
+                  onPointerUp={(event) => stopDrag(event, playlistRailRef.current)}
+                >
+                  {currentPlaylists.map((playlist, index) => (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className={`playlist-card ${activePlaylist?.id === playlist.id ? 'active' : ''}`}
+                      key={playlist.id}
+                      onClick={() => selectPlaylistOnClick(playlist.id)}
+                      onPointerDown={rememberCardPressStart}
+                      onPointerUp={(event) => selectPlaylistOnPointerUp(event, playlist.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          selectPlaylist(playlist.id)
+                        }
+                      }}
+                    >
+                      {playlist.thumbnail_url ? (
+                        <img src={playlist.thumbnail_url} alt="" />
+                      ) : (
+                        <span className="playlist-fallback">{index + 1}</span>
+                      )}
+                      <h3>{playlist.title}</h3>
+                      <p>{playlist.channel_title}</p>
+                    </div>
+                  ))}
                 </div>
               )}
             </section>
-          </div>
+
+            <div className="detail-grid history-detail-grid">
+              <section className="selected-track-section" aria-label="선택한 결과">
+                <h2>Popular</h2>
+                <article className="selected-track-card">
+                  {selectedCardImage && <img src={selectedCardImage} alt="" className="selected-track-image" />}
+                  <div>
+                    {selectedTab === 'track' && <p className="card-type">Selected track</p>}
+                    <a
+                      href={selectedCardUrl}
+                      className="selected-track-title-link"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <h3>{selectedCardTitle}</h3>
+                    </a>
+                    <p className="channel-name">{selectedCardSubtitle}</p>
+                    {selectedTab === 'playlist' && (
+                      <div
+                        className="playlist-track-scroll draggable-rail vertical-rail"
+                        ref={playlistTrackScrollRef}
+                        onPointerCancel={(event) => stopPlaylistDrag(event, playlistTrackScrollRef.current)}
+                        onPointerDown={(event) => startPlaylistDrag(event, playlistTrackScrollRef.current)}
+                        onPointerLeave={(event) => stopPlaylistDrag(event, playlistTrackScrollRef.current)}
+                        onPointerMove={(event) => movePlaylistDrag(event, playlistTrackScrollRef.current)}
+                        onPointerUp={(event) => stopPlaylistDrag(event, playlistTrackScrollRef.current)}
+                      >
+                        <ol className="sample-track-list playlist-track-list">
+                          {playlistTrackItems.map((track, index) => (
+                            <li
+                              key={`${activeRecommendation?.id ?? 'playlist'}-${index}-${track.title}`}
+                              className={index === activePlaylistTrackIndex ? 'active' : ''}
+                              ref={(node) => {
+                                playlistTrackItemRefs.current[index] = node
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => playPlaylistTrack(index)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                  playPlaylistTrack(index)
+                                }
+                              }}
+                            >
+                              {track.thumbnail_url ? (
+                                <img className="playlist-track-thumb" src={track.thumbnail_url} alt="" />
+                              ) : (
+                                <span className="playlist-track-number">{index + 1}</span>
+                              )}
+                              <span className="playlist-track-title">{track.title}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              </section>
+              <section className="mood-panel history-keywords-panel" aria-label="기록 키워드">
+                <h2>Keywords</h2>
+                <div
+                  className="mood-card history-keyword-card"
+                  onMouseEnter={(event) => openKeywordTooltip('감정', selectedRecord?.emotions.join(', ') || '없음', event)}
+                  onMouseMove={(event) => moveKeywordTooltip(selectedRecord?.emotions.join(', ') || '없음', event)}
+                  onMouseLeave={closeKeywordTooltip}
+                >
+                  <strong>감정</strong>
+                  <p>{selectedRecord?.emotions.join(', ') || '없음'}</p>
+                </div>
+                <div
+                  className="mood-card history-keyword-card"
+                  onMouseEnter={(event) => openKeywordTooltip('분위기', selectedRecord?.mood_tags.join(', ') || '없음', event)}
+                  onMouseMove={(event) => moveKeywordTooltip(selectedRecord?.mood_tags.join(', ') || '없음', event)}
+                  onMouseLeave={closeKeywordTooltip}
+                >
+                  <strong>분위기</strong>
+                  <p>{selectedRecord?.mood_tags.join(', ') || '없음'}</p>
+                </div>
+                <div
+                  className="mood-card history-keyword-card"
+                  onMouseEnter={(event) => openKeywordTooltip('검색어', selectedRecord?.search_keywords.join(', ') || '없음', event)}
+                  onMouseMove={(event) => moveKeywordTooltip(selectedRecord?.search_keywords.join(', ') || '없음', event)}
+                  onMouseLeave={closeKeywordTooltip}
+                >
+                  <strong>검색어</strong>
+                  <p>{selectedRecord?.search_keywords.join(', ') || '없음'}</p>
+                </div>
+              </section>
+              {keywordTooltip && (
+                <div
+                  className="keyword-floating-tooltip"
+                  style={{
+                    left: `${keywordTooltip.left}px`,
+                    top: `${keywordTooltip.top}px`,
+                  }}
+                >
+                  <strong>{keywordTooltip.label}</strong>
+                  <p>{keywordTooltip.value}</p>
+                </div>
+              )}
+            </div>
+          </section>
+          {renderPlayerBar()}
         </section>
       </main>
     )
   }
 
   return (
+
+
     <main className="app-shell">
       {!isResultView ? (
         <section className="start-screen" aria-labelledby="service-title">
@@ -1026,68 +1301,29 @@ function App() {
           </div>
         </section>
       ) : (
-        <section className="music-dashboard" aria-labelledby="result-title">
-          <aside className="dashboard-sidebar">
-            <p className="sidebar-logo">Moodify</p>
-            <button type="button" className="secondary-button sidebar-history-button" onClick={openHistoryMode}>
-              기록 보기
-            </button>
-            <nav className="recommendation-tabs" aria-label="추천 유형">
-              <button
-                type="button"
-                className={selectedTab === 'track' ? 'active' : ''}
-                onClick={() => setSelectedTab('track')}
-              >
-                <span>▮▮</span>
-                추천 곡
+        <section className="music-dashboard search-dashboard" aria-labelledby="result-title">
+          <aside className="dashboard-sidebar search-sidebar">
+            <div className="history-sidebar-top">
+              <button type="button" className="sidebar-logo-button" onClick={openSearchMode}>
+                Moodify
               </button>
-              <button
-                type="button"
-                className={selectedTab === 'playlist' ? 'active' : ''}
-                onClick={() => setSelectedTab('playlist')}
-              >
-                <span>♪</span>
-                플레이리스트
-              </button>
-            </nav>
-
-            <div className="sidebar-player-controls">
-              <button
-                type="button"
-                onClick={() =>
-                  selectedTab === 'playlist' ? stepPlaylistTrack('previous') : selectTrackByOffset(-1)
-                }
-                aria-label={selectedTab === 'playlist' ? '플레이리스트 이전 곡' : '이전 추천 곡'}
-              >
-                ⏮
-              </button>
-              <button
-                type="button"
-                className="player-main-button"
-                onClick={togglePlayer}
-                disabled={
-                  (selectedTab === 'track' ? !activeVideoId : !playlistTrackItems[currentPlaylistTrackIndex]?.video_id) ||
-                  !isYoutubeApiReady
-                }
-                aria-label={isPlayerActive ? '재생 중지' : selectedTab === 'track' ? '선택한 곡 재생' : '선택한 플레이리스트 재생'}
-              >
-                {isPlayerActive ? '⏸' : '▶'}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  selectedTab === 'playlist' ? stepPlaylistTrack('next') : selectTrackByOffset(1)
-                }
-                aria-label={selectedTab === 'playlist' ? '플레이리스트 다음 곡' : '다음 추천 곡'}
-              >
-                ⏭
+              <button type="button" className="sidebar-history-button" onClick={openHistoryMode}>
+                기록 보기
               </button>
             </div>
+            {renderRecommendationTabs('sidebar')}
           </aside>
-
-          <section className="dashboard-main">
+          <section className="dashboard-main search-main">
+            <div className="screen-toolbar">
+              <p className="eyebrow">Mood based music recommendation</p>
+              <button type="button" className="secondary-button" onClick={openHistoryMode}>
+                기록 보기
+              </button>
+            </div>
             <form className="result-search-form" onSubmit={handleSubmit}>
-              <label htmlFor="result-mood-search">Search music</label>
+              <label htmlFor="result-mood-search" onClick={openSearchMode}>
+                Search music
+              </label>
               <input
                 id="result-mood-search"
                 value={inputText}
@@ -1115,6 +1351,7 @@ function App() {
               </button>
             </form>
 
+            {renderRecommendationTabs()}
             <section className="recommendation-area" aria-label="추천 음악 결과">
               <h1 id="result-title">{selectedTab === 'track' ? 'Explore new' : 'Playlists'}</h1>
               {selectedTab === 'track' ? (
@@ -1254,59 +1491,8 @@ function App() {
                 ))}
               </section>
             </div>
-
-            <footer className="player-bar" aria-label="YouTube player">
-              <div id={YOUTUBE_PLAYER_ELEMENT_ID} className="youtube-audio-frame" />
-              <div className="player-volume" aria-hidden="true">
-                🔊
-              </div>
-
-              <div className="player-track-info">
-                {selectedTab === 'playlist' ? (
-                  <>
-                    {selectedCardImage && <img src={selectedCardImage} alt="" />}
-                    <div className="player-track-copy">
-                      <p>{selectedCardTitle}</p>
-                      <span>{selectedCardSubtitle}</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {activeRecommendation?.thumbnail_url && <img src={activeRecommendation.thumbnail_url} alt="" />}
-                    <div>
-                      <p>{activeRecommendation?.title}</p>
-                      <span>{activeRecommendation?.channel_title}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div
-                className="player-progress"
-                aria-label="재생 위치 조절"
-                role="slider"
-                tabIndex={0}
-                aria-valuemin={0}
-                aria-valuemax={Math.max(duration, 0)}
-                aria-valuenow={Math.min(currentTime, duration)}
-                onPointerCancel={(event) => stopProgressDrag(event, progressBarRef.current)}
-                onPointerDown={(event) => startProgressDrag(event, progressBarRef.current)}
-                onPointerLeave={(event) => stopProgressDrag(event, progressBarRef.current)}
-                onPointerMove={(event) => moveProgressDrag(event, progressBarRef.current)}
-                onPointerUp={(event) => stopProgressDrag(event, progressBarRef.current)}
-              >
-                <span>{formatTime(currentTime)}</span>
-                <div className="player-progress-bar" ref={progressBarRef}>
-                  <i style={{ width: `${progressPercent}%` }} />
-                </div>
-                <span>{formatTime(duration)}</span>
-              </div>
-
-              <a href={activeRecommendation?.url} target="_blank" rel="noreferrer">
-                YouTube
-              </a>
-            </footer>
           </section>
+          {renderPlayerBar()}
         </section>
       )}
     </main>
@@ -1314,3 +1500,5 @@ function App() {
 }
 
 export default App
+
+
