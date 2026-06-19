@@ -575,6 +575,7 @@ function App() {
           검색으로 돌아가기
         </button>
       </div>
+      {renderRecommendationTabs('sidebar')}
       <div className="history-rail">
         <h2>최근 기록</h2>
         <div className="history-list-scroll">
@@ -1093,7 +1094,6 @@ function App() {
               </div>
               <p>{selectedRecord?.input_text ?? '기록을 선택해 주세요'}</p>
             </div>
-            {renderRecommendationTabs()}
             <section className="recommendation-area" aria-label="기록 추천 결과">
               <h1 id="history-result-title">{selectedTab === 'track' ? 'Explore new' : 'Playlists'}</h1>
               {selectedTab === 'track' ? (
