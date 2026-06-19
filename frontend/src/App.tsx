@@ -179,6 +179,7 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState<AnalyzeResult | null>(null)
   const [searchRecords, setSearchRecords] = useState<SearchRecord[]>([])
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
+  const [historySearchText, setHistorySearchText] = useState('')
   const [playlistTracksById, setPlaylistTracksById] = useState<Record<string, PlaylistTrackItem[]>>({})
   const [selectedTab, setSelectedTab] = useState<RecommendationTab>('track')
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
@@ -197,6 +198,22 @@ function App() {
   const recommendedPlaylists = analysisResult?.recommended_playlists ?? []
   const selectedRecord =
     searchRecords.find((record) => record.id === selectedRecordId) ?? searchRecords[0] ?? null
+  const normalizedHistorySearchText = historySearchText.trim().toLowerCase()
+  const filteredSearchRecords = normalizedHistorySearchText
+    ? searchRecords.filter((record) => {
+        const haystack = [
+          record.input_text,
+          record.genre ?? '',
+          record.emotions.join(' '),
+          record.mood_tags.join(' '),
+          record.search_keywords.join(' '),
+        ]
+          .join(' ')
+          .toLowerCase()
+
+        return haystack.includes(normalizedHistorySearchText)
+      })
+    : searchRecords
   const currentTracks: RecommendationItem[] = isHistoryView
     ? selectedRecord?.recommended_tracks ?? []
     : recommendedTracks
@@ -558,13 +575,12 @@ function App() {
           검색으로 돌아가기
         </button>
       </div>
-      {renderRecommendationTabs('sidebar')}
       <div className="history-rail">
         <h2>최근 기록</h2>
         <div className="history-list-scroll">
           <div className="history-list">
-            {searchRecords.length ? (
-              searchRecords.map((record) => (
+            {filteredSearchRecords.length ? (
+              filteredSearchRecords.map((record) => (
                 <button
                   type="button"
                   key={record.id}
@@ -580,7 +596,7 @@ function App() {
             ) : (
               <div className="empty-state compact">
                 <h3>아직 기록이 없습니다</h3>
-                <p>검색 화면에서 문장을 입력하면 여기에 기록이 쌓입니다.</p>
+                <p>검색 결과가 없거나 아직 기록이 없습니다.</p>
               </div>
             )}
           </div>
@@ -1045,14 +1061,22 @@ function App() {
         <section className="music-dashboard history-dashboard" aria-labelledby="history-title">
           {renderHistorySidebar()}
           <section className="dashboard-main history-main">
-            <div className="screen-toolbar">
+            <div className="screen-toolbar history-toolbar">
               <div>
                 <p className="eyebrow">Search records</p>
                 <h1 id="history-title">기록 보기</h1>
               </div>
-              <button type="button" className="secondary-button" onClick={openSearchMode}>
-                검색 화면으로
-              </button>
+              <form className="history-search-form" onSubmit={(event) => event.preventDefault()}>
+                <label htmlFor="history-search-input" className="sr-only">
+                  기록 검색
+                </label>
+                <input
+                  id="history-search-input"
+                  value={historySearchText}
+                  onChange={(event) => setHistorySearchText(event.target.value)}
+                  placeholder="기록 검색"
+                />
+              </form>
             </div>
             <div className="history-summary-card">
               <div className="history-summary-head">
@@ -1255,11 +1279,6 @@ function App() {
       {!isResultView ? (
         <section className="start-screen" aria-labelledby="service-title">
           <div className="start-card">
-            <div className="screen-switcher">
-              <button type="button" className="secondary-button" onClick={openHistoryMode}>
-                기록 보기
-              </button>
-            </div>
             <p className="eyebrow">Mood based music recommendation</p>
             <h1 id="service-title">오늘의 감정에 맞는 음악을 찾습니다</h1>
             <p className="intro-copy">
@@ -1316,9 +1335,6 @@ function App() {
           <section className="dashboard-main search-main">
             <div className="screen-toolbar">
               <p className="eyebrow">Mood based music recommendation</p>
-              <button type="button" className="secondary-button" onClick={openHistoryMode}>
-                기록 보기
-              </button>
             </div>
             <form className="result-search-form" onSubmit={handleSubmit}>
               <label htmlFor="result-mood-search" onClick={openSearchMode}>
