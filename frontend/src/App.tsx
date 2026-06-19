@@ -565,6 +565,33 @@ function App() {
     </nav>
   )
 
+  const renderSearchScopeSwitch = () => (
+    <div className="scope-switch" role="group" aria-label="검색 기준 선택">
+      <button
+        type="button"
+        className={searchScope === 'all' ? 'active' : ''}
+        onClick={() => setSearchScope('all')}
+        aria-label="전체"
+        title="전체"
+      >
+        <span aria-hidden="true" className="scope-switch-icon">
+          🌐
+        </span>
+      </button>
+      <button
+        type="button"
+        className={searchScope === 'korean' ? 'active' : ''}
+        onClick={() => setSearchScope('korean')}
+        aria-label="한국어 중심"
+        title="한국어 중심"
+      >
+        <span aria-hidden="true" className="scope-switch-text">
+          KR
+        </span>
+      </button>
+    </div>
+  )
+
   const renderHistorySidebar = () => (
     <aside className="dashboard-sidebar history-sidebar">
       <div className="history-sidebar-top">
@@ -1074,6 +1101,7 @@ function App() {
                   onChange={(event) => setHistorySearchText(event.target.value)}
                   placeholder="기록 검색"
                 />
+                {renderSearchScopeSwitch()}
               </form>
             </div>
             <div className="history-summary-card">
@@ -1292,23 +1320,7 @@ function App() {
                 placeholder="예: 오늘은 지쳤지만 너무 무거운 음악은 듣고 싶지 않아"
                 rows={5}
               />
-              <div className="search-scope-control" aria-label="검색 옵션">
-                <span>검색 옵션</span>
-                <button
-                  type="button"
-                  className={searchScope === 'all' ? 'active' : ''}
-                  onClick={() => setSearchScope('all')}
-                >
-                  전체
-                </button>
-                <button
-                  type="button"
-                  className={searchScope === 'korean' ? 'active' : ''}
-                  onClick={() => setSearchScope('korean')}
-                >
-                  한국어 중심
-                </button>
-              </div>
+              {renderSearchScopeSwitch()}
               <button type="submit" disabled={!inputText.trim()}>
                 {isLoading ? '분석 중...' : '음악 추천 받기'}
               </button>
@@ -1343,22 +1355,7 @@ function App() {
                 onChange={(event) => setInputText(event.target.value)}
                 placeholder="현재의 기분을 입력해주세요"
               />
-              <div className="search-scope-control compact" aria-label="검색 옵션">
-                <button
-                  type="button"
-                  className={searchScope === 'all' ? 'active' : ''}
-                  onClick={() => setSearchScope('all')}
-                >
-                  전체
-                </button>
-                <button
-                  type="button"
-                  className={searchScope === 'korean' ? 'active' : ''}
-                  onClick={() => setSearchScope('korean')}
-                >
-                  한국어 중심
-                </button>
-              </div>
+              {renderSearchScopeSwitch()}
               <button type="submit" disabled={!inputText.trim() || isLoading}>
                 {isLoading ? '분석 중' : 'Search'}
               </button>
