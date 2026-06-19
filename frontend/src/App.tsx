@@ -646,9 +646,6 @@ function App() {
         </div>
 
         <div id={YOUTUBE_PLAYER_ELEMENT_ID} className="youtube-audio-frame" />
-        <div className="player-volume" aria-hidden="true">
-          <span aria-hidden="true">🔊</span>
-        </div>
 
         <div className="player-track-info">
           {selectedTab === 'playlist' ? (
