@@ -1,32 +1,52 @@
+﻿from app.ai.bedrock_client import load_request_hints
 from app.ai.model import load_model
 from app.ai.genre_mapping import extract_genre
-from app.ai.mood_mapping import adjust_mood_tags_by_text, build_mood_tags, build_search_keywords
+from app.ai.mood_mapping import (
+    adjust_mood_tags_by_text,
+    build_mood_tags,
+    build_search_keywords,
+    merge_requested_mood_tags,
+)
 from app.ai.preprocess import preprocess_text
 from app.ai.schema import AnalysisResult
 
 
 def predict_analysis(text: str) -> AnalysisResult:
-    # 1. 입력 문장을 정리한다.
     cleaned_text = preprocess_text(text)
 
-    # 2. 모델을 불러온다.
+    request_hints = load_request_hints(cleaned_text)
+    emotion_text = request_hints.emotion_text or cleaned_text
+    request_text = request_hints.request_text
+
     model = load_model()
 
-    # 3. 모델은 감정을 예측하고, 분위기 태그는 서비스 매핑으로 만든다.
-    predicted = model.predict(cleaned_text)
+    predicted = model.predict(emotion_text)
     emotions = predicted.get("emotions", [])
     mood_tags = predicted.get("mood_tags") or build_mood_tags(emotions)
-    mood_tags = adjust_mood_tags_by_text(mood_tags, cleaned_text)
-    genre = extract_genre(cleaned_text)
+    mood_tags = adjust_mood_tags_by_text(mood_tags, emotion_text)
+    mood_tags = merge_requested_mood_tags(
+        mood_tags,
+        request_hints.preferred_mood_tags,
+        request_hints.avoid_mood_tags,
+    )
+    genre = extract_genre(emotion_text) or request_hints.genre_hint
 
-    # 4. 검색용 키워드를 만든다.
-    search_keywords = build_search_keywords(emotions, mood_tags, genre)
+    search_keywords = build_search_keywords(
+        emotions,
+        mood_tags,
+        genre,
+        [*request_hints.request_keywords, *request_hints.extra_keywords],
+    )
 
-    # 5. 프론트와 백엔드가 함께 쓸 수 있는 형태로 반환한다.
     return AnalysisResult(
         input_text=cleaned_text,
+        emotion_text=emotion_text,
+        request_text=request_text,
         emotions=emotions,
         mood_tags=mood_tags,
         genre=genre,
         search_keywords=search_keywords,
+        has_avoidance=request_hints.has_avoidance,
+        has_negation=request_hints.has_negation,
+        request_keywords=request_hints.request_keywords,
     )

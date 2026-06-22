@@ -31,6 +31,7 @@
 - Python
 - FastAPI
 - YouTube Data API
+- AWS Bedrock는 선택적으로 사용 가능
 
 ### AI / ML
 
@@ -120,6 +121,17 @@ YOUTUBE_API_KEY=발급받은_YouTube_API_키
 API 키가 없거나 YouTube 요청이 실패하면 백엔드는 fallback 추천 데이터를 반환한다.
 
 프론트엔드에서 백엔드 주소를 바꿔야 하면 `frontend/.env`를 수정한 뒤 다시 빌드해야 한다.
+
+AWS Bedrock API key를 쓸 경우에는 아래 환경변수를 추가한다.
+
+```env
+AWS_REGION=ap-northeast-2
+BEDROCK_ENABLED=true
+BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
+AWS_BEARER_TOKEN_BEDROCK=발급받은_bedrock_api_key
+```
+
+Bedrock은 사용자 문장을 보조 해석하는 역할로만 사용하며, 실패하면 기존 로컬 모델과 규칙 기반 로직으로 자동 fallback한다.
 
 ## AI 모델 동작 방식
 

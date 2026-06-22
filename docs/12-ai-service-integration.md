@@ -258,3 +258,38 @@ irritation → heavy, uplifting
 sadness → warm, soft, late night
 tiredness → soft, quiet, warm
 ```
+
+## 14. Bedrock 보조 해석 연결
+
+Bedrock은 감정 모델을 대체하는 용도가 아니라, 사용자 문장에서 요청 의도를 더 잘 분리하기 위한 보조 해석기로 사용한다.
+
+예를 들면 아래 문장을 더 자연스럽게 정리하는 역할이다.
+
+```text
+우울해서 신나는 곡을 듣고 싶어
+```
+
+이 경우 Bedrock은 다음과 같은 보정값을 줄 수 있다.
+
+```json
+{
+  "preferred_mood_tags": ["uplifting", "light"],
+  "avoid_mood_tags": ["heavy", "late night"],
+  "extra_keywords": ["upbeat music", "energetic playlist"],
+  "genre_hint": null,
+  "search_scope_hint": null
+}
+```
+
+백엔드는 이 보정값을 로컬 모델 결과와 합친 뒤 최종 분위기 태그와 YouTube 검색어를 만든다.
+
+### 역할 분리
+
+- 로컬 모델: 감정 라벨 예측
+- Bedrock: 요청 분리, 문맥 보정, 검색어 힌트 생성
+- 백엔드 규칙: 최종 검색어 조합과 fallback 처리
+
+### 실패 시 동작
+
+Bedrock 호출이 실패하면 기존 로컬 모델과 규칙 기반 로직으로 자동 fallback한다.
+즉, Bedrock은 선택 기능이고, 필수 의존성은 아니다.

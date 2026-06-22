@@ -1,4 +1,4 @@
-from typing import Literal
+﻿from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -27,10 +27,15 @@ class RecommendationItem(BaseModel):
 
 class AnalyzeResponse(BaseModel):
     input_text: str
+    emotion_text: str = ""
+    request_text: str = ""
     emotions: list[str]
     mood_tags: list[str]
     genre: str | None = None
     search_keywords: list[str]
+    has_avoidance: bool = False
+    has_negation: bool = False
+    request_keywords: list[str] = Field(default_factory=list)
     recommended_tracks: list[RecommendationItem]
     recommended_playlists: list[RecommendationItem]
 
@@ -47,10 +52,15 @@ class SearchRecord(BaseModel):
     id: str
     created_at: str
     input_text: str
+    emotion_text: str = ""
+    request_text: str = ""
     search_scope: Literal["all", "korean"]
     emotions: list[str]
     mood_tags: list[str]
     genre: str | None = None
     search_keywords: list[str]
+    has_avoidance: bool = False
+    has_negation: bool = False
+    request_keywords: list[str] = Field(default_factory=list)
     recommended_tracks: list[SearchRecordItem]
     recommended_playlists: list[SearchRecordItem]

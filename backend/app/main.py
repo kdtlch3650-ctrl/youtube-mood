@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor
+﻿from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from itertools import count
 
@@ -52,10 +52,15 @@ def _build_analyze_response(request: AnalyzeRequest) -> AnalyzeResponse:
 
     return AnalyzeResponse(
         input_text=analysis.input_text,
+        emotion_text=analysis.emotion_text,
+        request_text=analysis.request_text,
         emotions=analysis.emotions,
         mood_tags=analysis.mood_tags,
         genre=analysis.genre,
         search_keywords=analysis.search_keywords,
+        has_avoidance=analysis.has_avoidance,
+        has_negation=analysis.has_negation,
+        request_keywords=analysis.request_keywords,
         recommended_tracks=recommended_tracks,
         recommended_playlists=recommended_playlists,
     )
