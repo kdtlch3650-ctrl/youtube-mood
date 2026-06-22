@@ -40,13 +40,24 @@
 ## 로컬 실행 예시
 
 ```powershell
-cd backend
-copy .env.example .env
+copy backend\.env.example backend\.env
 ```
 
+프론트엔드는 빌드 인자로 API 주소를 주입하므로, Docker 실행용으로는 별도 `.env`가 없어도 된다.
+
 ```powershell
-cd ..
 docker compose up --build
+```
+
+## 접속 주소
+
+- 프론트엔드: `http://127.0.0.1:5173`
+- 백엔드: `http://127.0.0.1:8000`
+
+## 종료 방법
+
+```powershell
+docker compose down
 ```
 
 ## 주의할 점
@@ -54,4 +65,4 @@ docker compose up --build
 - 모델 파일은 Git에 올리지 않는다
 - Docker 이미지에 모델을 직접 넣지 않고, 필요하면 볼륨으로 연결한다
 - 쿠버네티스는 나중 단계에서 추가한다
-
+- 프론트엔드는 빌드 시점의 `VITE_API_BASE_URL`을 사용하므로, 주소를 바꾸면 다시 빌드해야 한다

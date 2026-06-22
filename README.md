@@ -77,6 +77,36 @@ npm run dev -- --host 127.0.0.1 --port 5173
 http://127.0.0.1:5173
 ```
 
+## Docker 실행
+
+로컬에서 프론트와 백엔드를 함께 띄우려면 저장소 루트에서 실행한다.
+
+### 1. 환경변수 준비
+
+```powershell
+copy backend\.env.example backend\.env
+```
+
+`backend/.env`에는 YouTube API 키를 넣는다.
+프론트엔드는 Docker 빌드 인자로 API 주소를 주입하므로, 로컬 배포용 실행에서는 별도 `.env`가 없어도 된다.
+
+### 2. 컨테이너 실행
+
+```powershell
+docker compose up --build
+```
+
+접속 주소:
+
+- 프론트엔드: `http://127.0.0.1:5173`
+- 백엔드: `http://127.0.0.1:8000`
+
+### 3. 종료
+
+```powershell
+docker compose down
+```
+
 ## 환경 변수
 
 YouTube API 키는 `backend/.env`에 설정한다.
@@ -88,6 +118,8 @@ YOUTUBE_API_KEY=발급받은_YouTube_API_키
 `.env` 파일은 Git에 포함하지 않는다.
 
 API 키가 없거나 YouTube 요청이 실패하면 백엔드는 fallback 추천 데이터를 반환한다.
+
+프론트엔드에서 백엔드 주소를 바꿔야 하면 `frontend/.env`를 수정한 뒤 다시 빌드해야 한다.
 
 ## AI 모델 동작 방식
 

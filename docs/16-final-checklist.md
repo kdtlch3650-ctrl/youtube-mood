@@ -32,6 +32,45 @@ npm run dev -- --host 127.0.0.1 --port 5173
 http://127.0.0.1:5173
 ```
 
+## 2-1. Docker 실행 확인
+
+- [ ] 저장소 루트에서 Docker Compose 설정이 정상인지 확인했는가
+
+```powershell
+docker compose config
+```
+
+- [ ] Docker Compose로 백엔드와 프론트엔드가 함께 실행되는가
+
+```powershell
+docker compose up --build -d
+docker compose ps
+```
+
+- [ ] 프론트엔드 접속 주소가 열리는가
+
+```text
+http://127.0.0.1:5173
+```
+
+- [ ] 백엔드 접속 주소가 열리는가
+
+```text
+http://127.0.0.1:8000
+```
+
+- [ ] Docker 실행에 필요한 백엔드 `.env`가 준비되어 있는가
+
+```powershell
+copy backend\.env.example backend\.env
+```
+
+- [ ] 종료 명령으로 컨테이너를 내릴 수 있는가
+
+```powershell
+docker compose down
+```
+
 ## 3. 핵심 기능 확인
 
 - [ ] 자연어 문장을 입력하면 결과 화면으로 이동하는가

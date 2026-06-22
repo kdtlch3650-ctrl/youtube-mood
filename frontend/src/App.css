@@ -147,6 +147,7 @@
 .search-dashboard {
   grid-template-columns: 224px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
+  height: calc(100svh - 68px);
 }
 
 .search-sidebar {
@@ -995,6 +996,7 @@
 .history-dashboard {
   grid-template-columns: 224px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
+  height: calc(100svh - 68px);
   min-height: calc(100svh - 68px);
   overflow: hidden;
 }
@@ -1003,7 +1005,7 @@
   display: grid;
   gap: 8px;
   grid-template-rows: auto auto minmax(0, 1fr);
-  height: calc(120svh - 68px);
+  height: 100%;
   min-height: 0;
   overflow: hidden;
   padding: 26px 22px 0;
