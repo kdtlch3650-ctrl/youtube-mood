@@ -1,20 +1,19 @@
-# Docker 정리 초안
+﻿# Docker 정리
 
-이 문서는 `youtube-mood-recommendation` 프로젝트를 Docker 기반으로 정리하기 위한 기준을 적어둔 문서다.
+이 문서는 `youtube-mood-recommendation` 프로젝트를 Docker로 실행하는 방법을 정리한 안내서다.
 
-## 목적
+목표는 다음 두 가지다.
 
-- 프론트엔드와 백엔드를 같은 방식으로 실행하기
-- 나중에 쿠버네티스로 옮기기 쉬운 구조 만들기
-- 로컬 실행과 배포 준비를 분리하기
+- 프론트와 백엔드를 같은 방식으로 실행하기
+- 나중에 AWS나 Kubernetes로 옮길 때 재사용하기 쉬운 구조 만들기
 
 ## 현재 구성
 
-- `frontend`: React + Vite
 - `backend`: FastAPI
-- `ml`: 모델 파일과 학습 관련 스크립트
+- `frontend`: React + Vite + Nginx
+- `ml`: 학습된 모델 파일 저장소
 
-## 추가한 파일
+## 관련 파일
 
 - `backend/Dockerfile`
 - `frontend/Dockerfile`
@@ -25,44 +24,48 @@
 
 ## 실행 방식
 
-### 백엔드
-
-- Python 3.12 기반 이미지 사용
-- `uvicorn`으로 FastAPI 실행
-- `YOUTUBE_API_KEY`는 환경변수로 주입
-
-### 프론트엔드
-
-- Vite로 정적 빌드
-- 빌드 결과물을 Nginx로 제공
-- API 주소는 `VITE_API_BASE_URL`로 분리
-
-## 로컬 실행 예시
+### 1. 환경 파일 준비
 
 ```powershell
 copy backend\.env.example backend\.env
 ```
 
-프론트엔드는 빌드 인자로 API 주소를 주입하므로, Docker 실행용으로는 별도 `.env`가 없어도 된다.
+`backend/.env`에는 최소한 아래 값이 들어 있어야 한다.
+
+```env
+YOUTUBE_API_KEY=...
+AWS_REGION=ap-northeast-2
+BEDROCK_ENABLED=true
+BEDROCK_MODEL_ID=...
+AWS_BEARER_TOKEN_BEDROCK=...
+```
+
+### 2. 컨테이너 실행
 
 ```powershell
 docker compose up --build
 ```
 
-## 접속 주소
+### 3. 접속 주소
 
-- 프론트엔드: `http://127.0.0.1:5173`
+- 프론트: `http://127.0.0.1:5173`
 - 백엔드: `http://127.0.0.1:8000`
 
-## 종료 방법
+### 4. 종료
 
 ```powershell
 docker compose down
 ```
 
-## 주의할 점
+## 정리한 점
 
-- 모델 파일은 Git에 올리지 않는다
-- Docker 이미지에 모델을 직접 넣지 않고, 필요하면 볼륨으로 연결한다
-- 쿠버네티스는 나중 단계에서 추가한다
-- 프론트엔드는 빌드 시점의 `VITE_API_BASE_URL`을 사용하므로, 주소를 바꾸면 다시 빌드해야 한다
+- 백엔드는 `backend/.env`를 읽는다.
+- 모델 파일은 루트의 `ml/models`를 읽는다.
+- 프론트는 빌드 시점에 API 주소를 넣고, Nginx가 정적 파일을 제공한다.
+- 백엔드 헬스 체크가 살아 있어야 프론트가 먼저 뜨지 않는다.
+
+## 참고
+
+- Docker 실행이 안 되면 Docker Desktop과 WSL 상태를 먼저 확인한다.
+- YouTube API가 없으면 추천 데이터가 mock으로 내려온다.
+- `.env` 파일은 Git에 올리지 않는다.
