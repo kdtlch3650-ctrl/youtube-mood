@@ -3,10 +3,16 @@ import './App.css'
 
 type AnalyzeResult = {
   input_text: string
+  emotion_text?: string
+  request_text?: string
   emotions: string[]
   mood_tags: string[]
   genre?: string | null
   search_keywords: string[]
+  request_keywords?: string[]
+  blocked_mood_tags?: string[]
+  has_avoidance?: boolean
+  has_negation?: boolean
   recommended_tracks: RecommendationItem[]
   recommended_playlists: RecommendationItem[]
 }
@@ -25,11 +31,17 @@ type SearchRecord = {
   id: string
   created_at: string
   input_text: string
+  emotion_text?: string
+  request_text?: string
   search_scope: SearchScope
   emotions: string[]
   mood_tags: string[]
   genre?: string | null
   search_keywords: string[]
+  request_keywords?: string[]
+  blocked_mood_tags?: string[]
+  has_avoidance?: boolean
+  has_negation?: boolean
   recommended_tracks: SearchRecordItem[]
   recommended_playlists: SearchRecordItem[]
 }
@@ -153,6 +165,7 @@ function App() {
   const progressBarRef = useRef<HTMLDivElement>(null)
   const cardPressStartX = useRef(0)
   const ignoreClickAfterDrag = useRef(false)
+  const analysisModalCloseTimerRef = useRef<number | null>(null)
   const progressDragState = useRef({
     isDragging: false,
     wasPlaying: false,
@@ -192,6 +205,7 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [keywordTooltip, setKeywordTooltip] = useState<KeywordTooltipState>(null)
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false)
   const isResultView = Boolean(analysisResult)
   const isHistoryView = screenMode === 'history'
   const recommendedTracks = analysisResult?.recommended_tracks ?? []
@@ -271,6 +285,18 @@ function App() {
       ].map((tag) => [tag.toLowerCase(), tag]),
   ).values(),
   ).slice(0, 4)
+  const analysisModalData = isHistoryView ? selectedRecord : analysisResult
+  const analysisModalTitle = isHistoryView
+    ? selectedRecord?.input_text ?? '기록 상세'
+    : analysisResult?.input_text ?? (inputText.trim() || 'Mood based music recommendation')
+
+  useEffect(() => {
+    return () => {
+      if (analysisModalCloseTimerRef.current) {
+        window.clearTimeout(analysisModalCloseTimerRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!isHistoryView) {
@@ -533,6 +559,25 @@ function App() {
     setKeywordTooltip(null)
   }
 
+  const openAnalysisModal = () => {
+    if (analysisModalCloseTimerRef.current) {
+      window.clearTimeout(analysisModalCloseTimerRef.current)
+      analysisModalCloseTimerRef.current = null
+    }
+    setIsAnalysisModalOpen(true)
+  }
+
+  const closeAnalysisModal = () => {
+    if (analysisModalCloseTimerRef.current) {
+      window.clearTimeout(analysisModalCloseTimerRef.current)
+    }
+
+    analysisModalCloseTimerRef.current = window.setTimeout(() => {
+      setIsAnalysisModalOpen(false)
+      analysisModalCloseTimerRef.current = null
+    }, 120)
+  }
+
   const openSearchMode = () => {
     setScreenMode('search')
   }
@@ -591,6 +636,51 @@ function App() {
       </button>
     </div>
   )
+
+  const renderAnalysisModal = () => {
+    const source = analysisModalData
+    const emotionText = source?.emotion_text ?? source?.input_text ?? '아직 분석 결과가 없습니다.'
+    const requestText = source?.request_text ?? '아직 요청 표현이 없습니다.'
+    const requestKeywords = source?.request_keywords?.length ? source.request_keywords.join(', ') : '없음'
+    const blockedMoodTags = source?.blocked_mood_tags?.length ? source.blocked_mood_tags.join(', ') : '없음'
+    const preferredMoodTags = source?.mood_tags?.length ? source.mood_tags.join(', ') : '없음'
+    const searchKeywords = source?.search_keywords?.length ? source.search_keywords.join(', ') : '없음'
+
+    return (
+      <div className="analysis-modal-backdrop" role="presentation" onMouseEnter={openAnalysisModal} onMouseLeave={closeAnalysisModal}>
+        <div className="analysis-modal" role="dialog" aria-modal="false" aria-label="분석 요약">
+          <p className="analysis-modal-eyebrow">Mood based music recommendation</p>
+          <h2>{analysisModalTitle}</h2>
+          <div className="analysis-modal-grid">
+            <div>
+              <span>감정 표현</span>
+              <strong>{emotionText}</strong>
+            </div>
+            <div>
+              <span>요청 표현</span>
+              <strong>{requestText}</strong>
+            </div>
+            <div>
+              <span>선호 태그</span>
+              <strong>{preferredMoodTags}</strong>
+            </div>
+            <div>
+              <span>차단 태그</span>
+              <strong>{blockedMoodTags}</strong>
+            </div>
+            <div>
+              <span>요청 키워드</span>
+              <strong>{requestKeywords}</strong>
+            </div>
+            <div>
+              <span>검색 키워드</span>
+              <strong>{searchKeywords}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const renderHistorySidebar = () => (
     <aside className="dashboard-sidebar history-sidebar">
@@ -1304,7 +1394,14 @@ function App() {
       {!isResultView ? (
         <section className="start-screen" aria-labelledby="service-title">
           <div className="start-card">
-            <p className="eyebrow">Mood based music recommendation</p>
+            <button
+              type="button"
+              className="eyebrow eyebrow-button"
+              onMouseEnter={openAnalysisModal}
+              onMouseLeave={closeAnalysisModal}
+            >
+              Mood based music recommendation
+            </button>
             <h1 id="service-title">오늘의 감정에 맞는 음악을 찾습니다</h1>
             <p className="intro-copy">
               감정이나 상황을 문장으로 입력하면 분위기 태그를 분석하고, 어울리는 곡과
@@ -1343,7 +1440,14 @@ function App() {
           </aside>
           <section className="dashboard-main search-main">
             <div className="screen-toolbar">
-              <p className="eyebrow">Mood based music recommendation</p>
+              <button
+                type="button"
+                className="eyebrow eyebrow-button"
+                onMouseEnter={openAnalysisModal}
+                onMouseLeave={closeAnalysisModal}
+              >
+                Mood based music recommendation
+              </button>
             </div>
             <form className="result-search-form" onSubmit={handleSubmit}>
               <label htmlFor="result-mood-search" onClick={openSearchMode}>
@@ -1504,6 +1608,7 @@ function App() {
           {renderPlayerBar()}
         </section>
       )}
+      {isAnalysisModalOpen && renderAnalysisModal()}
     </main>
   )
 }

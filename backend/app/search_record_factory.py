@@ -24,6 +24,7 @@ def build_search_record(
         input_text=response.input_text,
         emotion_text=response.emotion_text,
         request_text=response.request_text,
+        negative_text=response.negative_text,
         search_scope=search_scope,  # type: ignore[arg-type]
         emotions=response.emotions,
         mood_tags=response.mood_tags,
@@ -32,6 +33,7 @@ def build_search_record(
         has_avoidance=response.has_avoidance,
         has_negation=response.has_negation,
         request_keywords=response.request_keywords,
+        blocked_mood_tags=response.blocked_mood_tags,
         recommended_tracks=[_to_record_item(item) for item in response.recommended_tracks],
         recommended_playlists=[_to_record_item(item) for item in response.recommended_playlists],
     )

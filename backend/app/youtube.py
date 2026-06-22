@@ -54,6 +54,13 @@ def has_youtube_api_key() -> bool:
     return bool(YOUTUBE_API_KEY)
 
 
+def _direct_requests_session() -> requests.Session:
+    # 로컬 개발 환경의 잘못된 시스템 프록시를 피하고 YouTube API에 직접 요청한다.
+    session = requests.Session()
+    session.trust_env = False
+    return session
+
+
 def build_search_params(
     query: str,
     result_type: str,
@@ -86,7 +93,7 @@ def search_youtube(
         return []
 
     try:
-        response = requests.get(
+        response = _direct_requests_session().get(
             YOUTUBE_SEARCH_URL,
             params=build_search_params(query, result_type, max_results, search_scope),
             timeout=5,
@@ -142,7 +149,7 @@ def search_playlist_tracks(playlist_id: str, max_results: int = 10) -> list[Play
         return []
 
     try:
-        response = requests.get(
+        response = _direct_requests_session().get(
             YOUTUBE_PLAYLIST_ITEMS_URL,
             params={
                 "part": "snippet",

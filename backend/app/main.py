@@ -54,6 +54,7 @@ def _build_analyze_response(request: AnalyzeRequest) -> AnalyzeResponse:
         input_text=analysis.input_text,
         emotion_text=analysis.emotion_text,
         request_text=analysis.request_text,
+        negative_text=analysis.negative_text,
         emotions=analysis.emotions,
         mood_tags=analysis.mood_tags,
         genre=analysis.genre,
@@ -61,6 +62,7 @@ def _build_analyze_response(request: AnalyzeRequest) -> AnalyzeResponse:
         has_avoidance=analysis.has_avoidance,
         has_negation=analysis.has_negation,
         request_keywords=analysis.request_keywords,
+        blocked_mood_tags=analysis.blocked_mood_tags,
         recommended_tracks=recommended_tracks,
         recommended_playlists=recommended_playlists,
     )

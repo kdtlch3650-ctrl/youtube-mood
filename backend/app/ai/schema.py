@@ -5,6 +5,7 @@ class AnalysisResult(BaseModel):
     input_text: str
     emotion_text: str = ""
     request_text: str = ""
+    negative_text: str = ""
     emotions: list[str] = Field(default_factory=list)
     mood_tags: list[str] = Field(default_factory=list)
     genre: str | None = None
@@ -12,3 +13,4 @@ class AnalysisResult(BaseModel):
     has_avoidance: bool = False
     has_negation: bool = False
     request_keywords: list[str] = Field(default_factory=list)
+    blocked_mood_tags: list[str] = Field(default_factory=list)

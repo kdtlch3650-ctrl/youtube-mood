@@ -6,6 +6,7 @@ from app.ai.mood_mapping import (
     build_mood_tags,
     build_search_keywords,
     merge_requested_mood_tags,
+    resolve_mood_tags,
 )
 from app.ai.preprocess import preprocess_text
 from app.ai.schema import AnalysisResult
@@ -29,6 +30,12 @@ def predict_analysis(text: str) -> AnalysisResult:
         request_hints.preferred_mood_tags,
         request_hints.avoid_mood_tags,
     )
+    mood_tags = resolve_mood_tags(
+        mood_tags,
+        request_hints.preferred_mood_tags,
+        request_hints.avoid_mood_tags,
+        request_hints.blocked_mood_tags,
+    )
     genre = extract_genre(emotion_text) or request_hints.genre_hint
 
     search_keywords = build_search_keywords(
@@ -42,6 +49,7 @@ def predict_analysis(text: str) -> AnalysisResult:
         input_text=cleaned_text,
         emotion_text=emotion_text,
         request_text=request_text,
+        negative_text=request_hints.negative_text,
         emotions=emotions,
         mood_tags=mood_tags,
         genre=genre,
@@ -49,4 +57,5 @@ def predict_analysis(text: str) -> AnalysisResult:
         has_avoidance=request_hints.has_avoidance,
         has_negation=request_hints.has_negation,
         request_keywords=request_hints.request_keywords,
+        blocked_mood_tags=request_hints.blocked_mood_tags,
     )

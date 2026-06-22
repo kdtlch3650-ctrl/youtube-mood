@@ -29,6 +29,7 @@ class AnalyzeResponse(BaseModel):
     input_text: str
     emotion_text: str = ""
     request_text: str = ""
+    negative_text: str = ""
     emotions: list[str]
     mood_tags: list[str]
     genre: str | None = None
@@ -36,6 +37,7 @@ class AnalyzeResponse(BaseModel):
     has_avoidance: bool = False
     has_negation: bool = False
     request_keywords: list[str] = Field(default_factory=list)
+    blocked_mood_tags: list[str] = Field(default_factory=list)
     recommended_tracks: list[RecommendationItem]
     recommended_playlists: list[RecommendationItem]
 
@@ -54,6 +56,7 @@ class SearchRecord(BaseModel):
     input_text: str
     emotion_text: str = ""
     request_text: str = ""
+    negative_text: str = ""
     search_scope: Literal["all", "korean"]
     emotions: list[str]
     mood_tags: list[str]
@@ -62,5 +65,6 @@ class SearchRecord(BaseModel):
     has_avoidance: bool = False
     has_negation: bool = False
     request_keywords: list[str] = Field(default_factory=list)
+    blocked_mood_tags: list[str] = Field(default_factory=list)
     recommended_tracks: list[SearchRecordItem]
     recommended_playlists: list[SearchRecordItem]

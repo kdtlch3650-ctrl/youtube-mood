@@ -38,6 +38,17 @@ GROUPED_MOOD_TAGS: dict[str, list[str]] = {
     "neutral": ["soft"],
 }
 
+RELATED_MOOD_TAGS: dict[str, list[str]] = {
+    "soft": ["quiet", "warm"],
+    "quiet": ["soft", "minimal"],
+    "warm": ["soft", "light"],
+    "late night": ["heavy", "soft"],
+    "heavy": ["late night"],
+    "uplifting": ["light"],
+    "light": ["uplifting", "soft"],
+    "minimal": ["quiet"],
+}
+
 SEARCH_KEYWORDS_BY_MOOD: dict[str, str] = {
     "soft": "soft emotional music",
     "quiet": "quiet calm playlist",
@@ -92,6 +103,16 @@ def unique_values(values: list[str]) -> list[str]:
     return result
 
 
+def expand_related_tags(tags: list[str]) -> list[str]:
+    expanded = []
+
+    for tag in tags:
+        expanded.append(tag)
+        expanded.extend(RELATED_MOOD_TAGS.get(tag, []))
+
+    return unique_values(expanded)
+
+
 def build_mood_tags(emotions: list[str]) -> list[str]:
     mood_tags = []
 
@@ -130,6 +151,25 @@ def merge_requested_mood_tags(
 
     merged_tags = [*preferred, *mood_tags]
     filtered_tags = [tag for tag in merged_tags if tag not in avoid]
+
+    if not filtered_tags:
+        filtered_tags = [*preferred, *mood_tags]
+
+    return unique_values(filtered_tags)[:4]
+
+
+def resolve_mood_tags(
+    mood_tags: list[str],
+    preferred_mood_tags: list[str] | None = None,
+    avoid_mood_tags: list[str] | None = None,
+    blocked_mood_tags: list[str] | None = None,
+) -> list[str]:
+    preferred = preferred_mood_tags or []
+    avoid = set(expand_related_tags(avoid_mood_tags or []))
+    blocked = set(expand_related_tags(blocked_mood_tags or []))
+
+    merged_tags = [*preferred, *mood_tags]
+    filtered_tags = [tag for tag in merged_tags if tag not in avoid and tag not in blocked]
 
     if not filtered_tags:
         filtered_tags = [*preferred, *mood_tags]
