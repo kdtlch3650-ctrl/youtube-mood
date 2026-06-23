@@ -28,6 +28,17 @@
 6. IngressClass와 Ingress를 EKS용으로 적용
 7. 상태 확인
 
+관련 실행 문서:
+
+- [EKS 클러스터 생성](26-eks-cluster-command.md)
+- [EKS 적용 흐름](27-eks-apply-flow.md)
+- [EKS Ingress 준비](28-eks-ingress-plan.md)
+- [EKS Ingress Controller](29-eks-ingress-controller-draft.md)
+- [EKS Load Balancer Controller 설치](30-eks-lbc-install.md)
+- [EKS LBC 설치 스크립트](31-eks-lbc-install-script.md)
+- [EKS 실행 순서](32-eks-runbook.md)
+- [EKS 최종 점검](33-eks-final-checklist.md)
+
 ## 초안 설정값
 
 - 리전: `ap-northeast-2`

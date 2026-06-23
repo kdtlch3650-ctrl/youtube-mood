@@ -71,6 +71,33 @@ copy backend\.env.example backend\.env
 docker compose down
 ```
 
+## 2-2. EKS 실행 확인
+
+- [ ] ECR 이미지 푸시 스크립트가 준비되어 있는가
+
+```powershell
+.\scripts\push-ecr.ps1 -AccountId 123456789012
+```
+
+- [ ] AWS Load Balancer Controller 설치 스크립트가 준비되어 있는가
+
+```powershell
+.\scripts\install-lbc.ps1 -AccountId 123456789012 -ClusterName youtube-mood -Region ap-northeast-2
+```
+
+- [ ] EKS 적용 스크립트가 준비되어 있는가
+
+```powershell
+.\scripts\apply-eks.ps1 -AccountId 123456789012 -ClusterName youtube-mood -Region ap-northeast-2
+```
+
+- [ ] EKS 실행 순서 문서를 확인했는가
+
+관련 문서:
+
+- [EKS 실행 순서](32-eks-runbook.md)
+- [EKS 최종 점검](33-eks-final-checklist.md)
+
 ## 3. 핵심 기능 확인
 
 - [ ] 자연어 문장을 입력하면 결과 화면으로 이동하는가
