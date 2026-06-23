@@ -106,3 +106,11 @@ k8s/
 3. `kind load docker-image`로 이미지 주입
 4. `kubectl apply`로 k8s 파일 적용
 5. `kubectl get pods`, `kubectl get svc`, `kubectl get ingress`로 상태 확인
+
+## 실제 적용 팁
+
+- `secret.example.yaml`은 예시만 남긴다
+- 실제 `secret.yaml`은 로컬에서 생성해서 적용한다
+- `k8s/local/create-secret.ps1`는 `backend/.env`를 읽어서 `k8s/secret.yaml`을 만든다
+- 로컬 테스트가 끝난 뒤에야 EKS로 옮긴다
+- `k8s/local/setup-kind.ps1`는 위 과정을 한 번에 실행하고, secret이 없으면 먼저 만든다
