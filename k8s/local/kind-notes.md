@@ -99,3 +99,10 @@ kind delete cluster --name youtube-mood
 - backend 서비스가 `/health`에 응답하는지 확인
 - frontend가 `/api`로 백엔드에 접근하는지 확인
 - 브라우저에서 같은 주소로 화면과 API가 함께 동작하는지 확인
+
+## 검증 결과
+
+- kind 클러스터 생성됨
+- backend / frontend Pod가 Running 상태로 올라감
+- Service와 Ingress가 생성됨
+- 프론트 포트포워딩으로 브라우저 접근 가능함

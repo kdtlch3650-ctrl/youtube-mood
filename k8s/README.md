@@ -115,3 +115,11 @@ k8s/
 - 로컬 테스트가 끝난 뒤에야 EKS로 옮긴다
 - `k8s/local/setup-kind.ps1`는 위 과정을 한 번에 실행하고, secret이 없으면 먼저 만든다
 - 브라우저 확인은 `k8s/local/forward-frontend.ps1`로 프론트 포트포워딩을 띄우면 된다
+
+## 로컬 검증 결과
+
+- `kind` 클러스터 생성 확인
+- `backend` / `frontend` Pod 실행 확인
+- `Service` 생성 확인
+- `Ingress` 생성 확인
+- 프론트 포트포워딩 후 브라우저 접근 확인
