@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: youtube-mood-backend
+  namespace: youtube-mood
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: youtube-mood-backend
+  template:
+    metadata:
+      labels:
+        app: youtube-mood-backend
+    spec:
+      containers:
+        - name: backend
+          image: youtube-mood-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: youtube-mood-config
+            - secretRef:
+                name: youtube-mood-secret
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
