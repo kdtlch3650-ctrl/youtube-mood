@@ -39,6 +39,12 @@ foreach ($requiredKey in $requiredKeys) {
   }
 }
 
+function Convert-ToYamlSingleQuotedString {
+  param([string]$Value)
+
+  return "'" + ($Value -replace "'", "''") + "'"
+}
+
 $secretYaml = @"
 apiVersion: v1
 kind: Secret
@@ -47,8 +53,8 @@ metadata:
   namespace: $Namespace
 type: Opaque
 stringData:
-  YOUTUBE_API_KEY: "$($pairs['YOUTUBE_API_KEY'].Replace('"', '\"'))"
-  AWS_BEARER_TOKEN_BEDROCK: "$($pairs['AWS_BEARER_TOKEN_BEDROCK'].Replace('"', '\"'))"
+  YOUTUBE_API_KEY: $(Convert-ToYamlSingleQuotedString $pairs['YOUTUBE_API_KEY'])
+  AWS_BEARER_TOKEN_BEDROCK: $(Convert-ToYamlSingleQuotedString $pairs['AWS_BEARER_TOKEN_BEDROCK'])
 "@
 
 Set-Content -Encoding utf8 -LiteralPath $secretFile -Value $secretYaml

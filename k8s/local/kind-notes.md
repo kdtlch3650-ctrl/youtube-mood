@@ -49,6 +49,17 @@ kubectl describe pod -n youtube-mood
 kubectl logs -n youtube-mood deploy/youtube-mood-backend
 ```
 
+## 브라우저 확인
+
+`kind`에서 외부 브라우저로 바로 보려면 프론트 서비스에 포트포워딩을 건다.
+
+```powershell
+.\k8s\local\forward-frontend.ps1
+```
+
+- 브라우저 주소: `http://127.0.0.1:8080`
+- 프론트 Nginx가 `/api/` 요청을 백엔드 서비스로 넘긴다
+
 ## 이미지 준비 메모
 
 - `backend`와 `frontend` 이미지는 먼저 로컬에서 빌드해야 한다
