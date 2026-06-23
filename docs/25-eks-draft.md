@@ -24,7 +24,7 @@
 2. EKS 클러스터 생성
 3. 노드 그룹 생성
 4. IAM 권한 확인
-5. 매니페스트의 이미지 주소를 ECR로 교체
+5. EKS 전용 매니페스트의 이미지 주소를 ECR로 반영
 6. `kubectl apply`
 7. 상태 확인
 
@@ -48,9 +48,9 @@ aws eks update-kubeconfig --region ap-northeast-2 --name youtube-mood
 kubectl apply -f k8s\namespace.yaml
 kubectl apply -f k8s\configmap.yaml
 kubectl apply -f k8s\secret.yaml
-kubectl apply -f k8s\backend\deployment.yaml
+kubectl apply -f k8s\eks\backend\deployment.yaml
 kubectl apply -f k8s\backend\service.yaml
-kubectl apply -f k8s\frontend\deployment.yaml
+kubectl apply -f k8s\eks\frontend\deployment.yaml
 kubectl apply -f k8s\frontend\service.yaml
 kubectl apply -f k8s\ingress\ingress.yaml
 ```
@@ -60,7 +60,8 @@ kubectl apply -f k8s\ingress\ingress.yaml
 - EKS는 비용이 든다
 - 처음부터 크게 만들지 않는다
 - 로컬 `kind`에서 정상 확인한 뒤 옮긴다
-- 이미지 주소를 `docker.io/library/...`가 아니라 ECR 주소로 바꿔야 한다
+- 로컬 매니페스트와 EKS 매니페스트는 분리해서 관리한다
+- 이미지 주소를 `docker.io/library/...`가 아니라 ECR 주소로 반영해야 한다
 
 ## 다음 단계
 

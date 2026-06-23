@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: youtube-mood-frontend
+  namespace: youtube-mood
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: youtube-mood-frontend
+  template:
+    metadata:
+      labels:
+        app: youtube-mood-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: <account-id>.dkr.ecr.ap-northeast-2.amazonaws.com/youtube-mood-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
