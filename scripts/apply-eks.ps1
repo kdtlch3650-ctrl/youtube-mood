@@ -48,7 +48,8 @@ kubectl apply -f (Join-Path $tempRoot 'backend-deployment.yaml')
 kubectl apply -f (Join-Path $repoRoot 'k8s\backend\service.yaml')
 kubectl apply -f (Join-Path $tempRoot 'frontend-deployment.yaml')
 kubectl apply -f (Join-Path $repoRoot 'k8s\frontend\service.yaml')
-kubectl apply -f (Join-Path $repoRoot 'k8s\ingress\ingress.yaml')
+kubectl apply -f (Join-Path $repoRoot 'k8s\eks\ingress-class.yaml')
+kubectl apply -f (Join-Path $repoRoot 'k8s\eks\ingress.yaml')
 
 kubectl get pods -n youtube-mood -o wide
 kubectl get svc -n youtube-mood

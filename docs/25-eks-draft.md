@@ -25,7 +25,7 @@
 3. 노드 그룹 생성
 4. IAM 권한 확인
 5. EKS 전용 매니페스트의 이미지 주소를 ECR로 반영
-6. `kubectl apply`
+6. IngressClass와 Ingress를 EKS용으로 적용
 7. 상태 확인
 
 ## 초안 설정값
@@ -52,7 +52,8 @@ kubectl apply -f k8s\eks\backend\deployment.yaml
 kubectl apply -f k8s\backend\service.yaml
 kubectl apply -f k8s\eks\frontend\deployment.yaml
 kubectl apply -f k8s\frontend\service.yaml
-kubectl apply -f k8s\ingress\ingress.yaml
+kubectl apply -f k8s\eks\ingress-class.yaml
+kubectl apply -f k8s\eks\ingress.yaml
 ```
 
 ## 주의할 점
@@ -62,6 +63,7 @@ kubectl apply -f k8s\ingress\ingress.yaml
 - 로컬 `kind`에서 정상 확인한 뒤 옮긴다
 - 로컬 매니페스트와 EKS 매니페스트는 분리해서 관리한다
 - 이미지 주소를 `docker.io/library/...`가 아니라 ECR 주소로 반영해야 한다
+- Ingress는 AWS Load Balancer Controller용 설정이 필요하다
 
 ## 다음 단계
 

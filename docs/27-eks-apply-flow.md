@@ -12,6 +12,8 @@
 
 - `k8s/eks/backend/deployment.yaml`
 - `k8s/eks/frontend/deployment.yaml`
+- `k8s/eks/ingress-class.yaml`
+- `k8s/eks/ingress.yaml`
 - `scripts/push-ecr.ps1`
 - `scripts/apply-eks.ps1`
 

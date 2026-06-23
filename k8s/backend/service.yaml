@@ -3,6 +3,9 @@ kind: Service
 metadata:
   name: youtube-mood-backend
   namespace: youtube-mood
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
 spec:
   selector:
     app: youtube-mood-backend
