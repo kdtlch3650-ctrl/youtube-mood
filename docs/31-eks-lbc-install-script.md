@@ -1,12 +1,14 @@
-# EKS Load Balancer Controller 설치 스크립트 초안
+﻿# EKS Load Balancer Controller 설치 스크립트 안내
 
-이 문서는 AWS Load Balancer Controller 설치를 PowerShell 스크립트로 묶은 초안이다.
+이 문서는 `scripts/install-lbc.ps1`의 실행 방법과 입력값을 정리한다.
 
 ## 목적
 
-- 수동 명령을 매번 치지 않기 위해서
-- 계정 ID와 클러스터 이름만 바꿔서 재사용하기 위해서
-- 설치 순서를 실수 없이 반복하기 위해서
+- OIDC provider 연결
+- IAM policy 생성 또는 재사용
+- `aws-load-balancer-controller` ServiceAccount 생성
+- Helm으로 컨트롤러 설치
+- VPC 자동 탐지가 안 될 때 `vpcId`를 명시
 
 ## 사용 파일
 
@@ -16,27 +18,19 @@
 ## 실행 예시
 
 ```powershell
-.\scripts\install-lbc.ps1 -AccountId 123456789012 -ClusterName youtube-mood -Region ap-northeast-2
+.\scripts\install-lbc.ps1 -AccountId 123456789012 -VpcId vpc-06d30012eee7ab1ba -ClusterName youtube-mood -Region ap-northeast-2
 ```
 
-## 스크립트가 하는 일
+## 새로 필요한 값
 
-1. 필수 명령어가 있는지 확인한다
-2. OIDC 제공자를 연결한다
-3. IAM 정책 파일을 내려받는다
-4. IAM 정책을 만든다
-5. `aws-load-balancer-controller` ServiceAccount를 만든다
-6. Helm으로 컨트롤러를 설치한다
-7. 설치 상태를 확인한다
+- `AccountId`: AWS 계정 번호
+- `VpcId`: 클러스터가 사용하는 VPC ID
 
-## 주의할 점
+## 왜 `VpcId`가 필요한가
 
-- `AccountId`가 실제 AWS 계정 번호여야 한다
-- EKS 클러스터가 먼저 존재해야 한다
-- AWS 권한이 부족하면 IAM 정책 생성 단계에서 실패할 수 있다
+컨트롤러가 인스턴스 메타데이터에서 VPC ID를 자동으로 읽지 못하면 시작에 실패할 수 있다. 이때 Helm 설치값에 `vpcId`를 직접 넣는다.
 
-## 다음 단계
+## 확인 기준
 
-- 실제 AWS 계정으로 한 번 실행해 보기
-- `kubectl get ingress` 결과 확인
-- 외부 주소가 붙는지 확인
+- `kubectl get pods -n kube-system`에서 `aws-load-balancer-controller`가 `Running`이어야 한다.
+- 더 이상 `failed to get VPC ID` 오류가 나오지 않아야 한다.

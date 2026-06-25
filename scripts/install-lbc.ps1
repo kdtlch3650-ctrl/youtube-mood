@@ -1,6 +1,8 @@
-param(
+﻿param(
   [Parameter(Mandatory = $true)]
   [string]$AccountId,
+  [Parameter(Mandatory = $true)]
+  [string]$VpcId,
   [string]$Region = 'ap-northeast-2',
   [string]$ClusterName = 'youtube-mood',
   [string]$PolicyName = 'AWSLoadBalancerControllerIAMPolicy',
@@ -11,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 
 foreach ($command in @('aws', 'eksctl', 'kubectl', 'helm')) {
   if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
-    throw "$command 명령을 찾을 수 없습니다. 설치한 뒤 다시 실행하세요."
+    throw "$command is not installed or not found in PATH."
   }
 }
 
@@ -25,26 +27,26 @@ if (Test-Path $tempRoot) {
 
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
-Write-Host '1. OIDC 제공자 연결'
+Write-Host '1. Associate OIDC provider'
 eksctl utils associate-iam-oidc-provider --region $Region --cluster $ClusterName --approve
 
-Write-Host '2. IAM 정책 파일 다운로드'
+Write-Host '2. Download IAM policy'
 $policyFile = Join-Path $tempRoot 'iam-policy.json'
 Invoke-WebRequest -Uri $policyUrl -OutFile $policyFile
 
-Write-Host '3. IAM 정책 존재 확인'
+Write-Host '3. Ensure IAM policy exists'
 aws iam get-policy --policy-arn $policyArn *> $null
 if ($LASTEXITCODE -ne 0) {
-  Write-Host '   정책이 없어서 새로 생성합니다'
+  Write-Host '   Policy not found. Creating a new one.'
   aws iam create-policy --policy-name $PolicyName --policy-document "file://$policyFile"
   if ($LASTEXITCODE -ne 0) {
-    throw 'IAM 정책 생성에 실패했습니다.'
+    throw 'Failed to create IAM policy.'
   }
 } else {
-  Write-Host '   이미 정책이 있습니다'
+  Write-Host '   Policy already exists.'
 }
 
-Write-Host '4. ServiceAccount 생성'
+Write-Host '4. Create service account'
 eksctl create iamserviceaccount `
   --cluster $ClusterName `
   --namespace kube-system `
@@ -54,16 +56,18 @@ eksctl create iamserviceaccount `
   --region $Region `
   --approve
 
-Write-Host '5. Helm 저장소 추가'
+Write-Host '5. Add Helm repository'
 helm repo add eks https://aws.github.io/eks-charts
 helm repo update
 
-Write-Host '6. AWS Load Balancer Controller 설치'
+Write-Host '6. Install AWS Load Balancer Controller'
 helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller `
   -n kube-system `
-  --set clusterName=$ClusterName `
+  --set-string clusterName=$ClusterName `
+  --set-string region=$Region `
+  --set-string vpcId=$VpcId `
   --set serviceAccount.create=false `
   --set serviceAccount.name=aws-load-balancer-controller
 
-Write-Host '7. 설치 상태 확인'
+Write-Host '7. Check installed pods'
 kubectl get pods -n kube-system
