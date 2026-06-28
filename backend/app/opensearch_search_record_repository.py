@@ -277,7 +277,7 @@ class OpenSearchSearchRecordRepository:
             if self._index_ready:
                 return
 
-            response = self._request('HEAD', f'/{self._index_name}')
+            response = self._request('HEAD', f'/{self._index_name}', raise_for_status=False)
             if response.status_code == 404:
                 self._request(
                     'PUT',
@@ -309,6 +309,7 @@ class OpenSearchSearchRecordRepository:
         path: str,
         *,
         json_body: dict[str, object] | None = None,
+        raise_for_status: bool = True,
     ) -> requests.Response:
         url = f'{self._endpoint}{path}'
         body = b''
@@ -320,7 +321,8 @@ class OpenSearchSearchRecordRepository:
         credentials = self._credentials_provider.get_credentials()
         signed_headers = self._signer.sign(method, url, credentials, body=body, headers=headers)
         response = requests.request(method, url, headers=signed_headers, data=body, timeout=20)
-        response.raise_for_status()
+        if raise_for_status:
+            response.raise_for_status()
         return response
 
 
