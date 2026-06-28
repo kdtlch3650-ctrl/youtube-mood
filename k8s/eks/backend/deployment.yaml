@@ -15,10 +15,19 @@ spec:
     spec:
       containers:
         - name: backend
-          image: <account-id>.dkr.ecr.ap-northeast-2.amazonaws.com/youtube-mood-backend:latest
+          image: 240029900442.dkr.ecr.ap-northeast-2.amazonaws.com/youtube-mood-backend:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
+          resources:
+            # Fargate는 Pod 요청값 기준으로 task size를 잡는다.
+            # backend 이미지가 무거워서 최소 사양으로는 새 Pod 생성이 불안정해질 수 있다.
+            requests:
+              cpu: "1"
+              memory: "4Gi"
+            limits:
+              cpu: "1"
+              memory: "4Gi"
           envFrom:
             - configMapRef:
                 name: youtube-mood-config
