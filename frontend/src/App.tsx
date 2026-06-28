@@ -137,6 +137,8 @@ const samplePlaylistTracks = [
   '다섯 번째 추천 트랙',
 ]
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '')
+const APP_ENV = (import.meta.env.VITE_APP_ENV ?? 'local').trim().toLowerCase()
+const ENVIRONMENT_LABEL = APP_ENV === 'prod' || APP_ENV === 'production' ? 'PROD' : 'LOCAL'
 const COGNITO_DOMAIN = (import.meta.env.VITE_COGNITO_DOMAIN ?? '').replace(/\/$/, '')
 const COGNITO_CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID ?? ''
 const COGNITO_REDIRECT_URI = import.meta.env.VITE_COGNITO_REDIRECT_URI ?? window.location.origin
@@ -945,6 +947,9 @@ function App() {
 
   const renderAuthControls = () => (
     <div className="auth-actions">
+      <span className={`environment-badge ${ENVIRONMENT_LABEL === 'PROD' ? 'prod' : 'local'}`}>
+        {ENVIRONMENT_LABEL}
+      </span>
       {authSession ? (
         <>
           <span className="auth-chip" title={authSession.user.email || authSession.user.name || 'Google 로그인'}>

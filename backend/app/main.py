@@ -2,6 +2,8 @@
 from datetime import datetime, timezone
 from itertools import count
 
+import os
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,6 +17,14 @@ from app.youtube import get_playlist_tracks, get_recommended_playlists, get_reco
 app = FastAPI(title="YouTube Mood Recommendation API")
 
 _record_sequence = count(1)
+_app_env = (os.getenv("APP_ENV") or "local").strip().lower()
+
+
+def _get_environment_name() -> str:
+    if _app_env in {"prod", "production"}:
+        return "prod"
+
+    return "local"
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,14 +37,14 @@ app.add_middleware(
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "environment": _get_environment_name()}
 
 
 @app.get("/")
 @app.get("/api/health")
 def health_check_alias() -> dict[str, str]:
     # ALB 기본 헬스체크나 브라우저 직접 확인 경로가 달라도 같은 응답을 돌려준다.
-    return {"status": "ok"}
+    return {"status": "ok", "environment": _get_environment_name()}
 
 
 def _build_analyze_response(request: AnalyzeRequest) -> AnalyzeResponse:

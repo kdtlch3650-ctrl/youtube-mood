@@ -405,6 +405,32 @@
   gap: 10px;
 }
 
+.environment-badge {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #eef0f7;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 8px 11px;
+  text-transform: uppercase;
+}
+
+.environment-badge.local {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+}
+
+.environment-badge.prod {
+  background: rgba(87, 101, 255, 0.18);
+  border-color: rgba(87, 101, 255, 0.4);
+  color: #dfe4ff;
+}
+
 .auth-button {
   background: linear-gradient(135deg, #5765ff, #4d5bff);
   border: 0;
