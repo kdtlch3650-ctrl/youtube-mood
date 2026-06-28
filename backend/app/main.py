@@ -29,6 +29,13 @@ def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/")
+@app.get("/api/health")
+def health_check_alias() -> dict[str, str]:
+    # ALB 기본 헬스체크나 브라우저 직접 확인 경로가 달라도 같은 응답을 돌려준다.
+    return {"status": "ok"}
+
+
 def _build_analyze_response(request: AnalyzeRequest) -> AnalyzeResponse:
     analysis = predict_analysis(request.text)
 

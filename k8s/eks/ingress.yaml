@@ -7,6 +7,7 @@ metadata:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/subnets: subnet-072181101c90b9992,subnet-04f37c6a19affe367
 spec:
   ingressClassName: alb
   rules:
@@ -16,9 +17,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: youtube-mood-backend
+                name: youtube-mood-frontend
                 port:
-                  number: 8000
+                  number: 80
           - path: /
             pathType: Prefix
             backend:
