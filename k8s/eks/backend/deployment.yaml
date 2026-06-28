@@ -33,6 +33,9 @@ spec:
                 name: youtube-mood-config
             - secretRef:
                 name: youtube-mood-secret
+          env:
+            - name: APP_ENV
+              value: "prod"
           readinessProbe:
             httpGet:
               path: /health
