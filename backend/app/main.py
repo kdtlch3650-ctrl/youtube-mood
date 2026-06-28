@@ -9,7 +9,7 @@ from app.cognito_auth import AuthenticatedUser, get_authenticated_user
 from app.ai.predict import predict_analysis
 from app.schemas import AnalyzeRequest, AnalyzeResponse, PlaylistTrackItem, SearchRecord
 from app.search_record_factory import build_search_record
-from app.search_record_repository import list_search_records, save_search_record
+from app.opensearch_search_record_repository import list_search_records, save_search_record
 from app.youtube import get_playlist_tracks, get_recommended_playlists, get_recommended_tracks
 
 app = FastAPI(title="YouTube Mood Recommendation API")
