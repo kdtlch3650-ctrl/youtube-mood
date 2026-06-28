@@ -2,13 +2,14 @@
 from datetime import datetime, timezone
 from itertools import count
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.cognito_auth import AuthenticatedUser, get_authenticated_user
 from app.ai.predict import predict_analysis
 from app.schemas import AnalyzeRequest, AnalyzeResponse, PlaylistTrackItem, SearchRecord
 from app.search_record_factory import build_search_record
-from app.search_record_store import list_search_records, save_search_record
+from app.search_record_repository import list_search_records, save_search_record
 from app.youtube import get_playlist_tracks, get_recommended_playlists, get_recommended_tracks
 
 app = FastAPI(title="YouTube Mood Recommendation API")
@@ -75,22 +76,38 @@ def _build_analyze_response(request: AnalyzeRequest) -> AnalyzeResponse:
     )
 
 
-def _create_record(response: AnalyzeResponse, search_scope: str) -> SearchRecord:
+def _create_record(
+    response: AnalyzeResponse,
+    search_scope: str,
+    user: AuthenticatedUser | None = None,
+) -> SearchRecord:
     record_id = f"record-{next(_record_sequence)}"
     created_at = datetime.now(timezone.utc).isoformat()
-    return build_search_record(record_id, created_at, response, search_scope)
+    return build_search_record(
+        record_id,
+        created_at,
+        response,
+        search_scope,
+        user_id=user['user_id'] if user else None,
+        user_email=user['user_email'] if user else None,
+    )
 
 
 @app.post("/api/analyze")
-def analyze_text(request: AnalyzeRequest) -> AnalyzeResponse:
+def analyze_text(
+    request: AnalyzeRequest,
+    user: AuthenticatedUser | None = Depends(get_authenticated_user),
+) -> AnalyzeResponse:
     response = _build_analyze_response(request)
-    save_search_record(_create_record(response, request.search_scope))
+    save_search_record(_create_record(response, request.search_scope, user))
     return response
 
 
 @app.get("/api/search-records")
-def get_search_records() -> list[SearchRecord]:
-    return list_search_records()
+def get_search_records(
+    user: AuthenticatedUser | None = Depends(get_authenticated_user),
+) -> list[SearchRecord]:
+    return list_search_records(user['user_id'] if user else None)
 
 
 @app.get("/api/playlists/{playlist_id}/tracks")

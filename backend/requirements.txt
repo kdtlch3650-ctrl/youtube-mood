@@ -1,5 +1,7 @@
 fastapi
+cryptography
 python-dotenv
+PyJWT
 requests
 torch
 transformers

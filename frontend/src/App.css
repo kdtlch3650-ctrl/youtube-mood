@@ -360,6 +360,62 @@
   gap: 16px;
 }
 
+.toolbar-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.auth-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.auth-button {
+  background: linear-gradient(135deg, #5765ff, #4d5bff);
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 11px 16px;
+  white-space: nowrap;
+}
+
+.auth-button.secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+}
+
+.auth-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.auth-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  max-width: 220px;
+  overflow: hidden;
+  padding: 10px 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-error {
+  color: #ff9da7;
+  font-size: 13px;
+  margin: -6px 0 0;
+}
+
 .history-sidebar-top {
   display: grid;
   gap: 12px;

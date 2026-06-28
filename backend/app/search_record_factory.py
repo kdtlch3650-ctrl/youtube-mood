@@ -16,11 +16,15 @@ def build_search_record(
     created_at: str,
     response: AnalyzeResponse,
     search_scope: str,
+    user_id: str | None = None,
+    user_email: str | None = None,
 ) -> SearchRecord:
     # OpenSearch 저장용으로 바로 쓸 수 있도록 응답을 기록 객체로 변환한다.
     return SearchRecord(
         id=record_id,
         created_at=created_at,
+        user_id=user_id,
+        user_email=user_email,
         input_text=response.input_text,
         emotion_text=response.emotion_text,
         request_text=response.request_text,

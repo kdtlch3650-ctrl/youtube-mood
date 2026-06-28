@@ -53,6 +53,8 @@ class SearchRecordItem(BaseModel):
 class SearchRecord(BaseModel):
     id: str
     created_at: str
+    user_id: str | None = None
+    user_email: str | None = None
     input_text: str
     emotion_text: str = ""
     request_text: str = ""
