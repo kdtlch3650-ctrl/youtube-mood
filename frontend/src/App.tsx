@@ -191,8 +191,12 @@ const createCodeVerifier = () => {
 }
 
 const createCodeChallenge = async (verifier: string) => {
+  if (!window.isSecureContext || !globalThis.crypto?.subtle) {
+    throw new Error('로그인은 HTTPS 또는 localhost 환경에서만 사용할 수 있습니다.')
+  }
+
   const encoded = new TextEncoder().encode(verifier)
-  const digest = await crypto.subtle.digest('SHA-256', encoded)
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', encoded)
   return encodeBase64Url(new Uint8Array(digest))
 }
 
@@ -474,6 +478,11 @@ function App() {
   const startGoogleLogin = async () => {
     if (!isAuthConfigured) {
       setAuthError('Cognito 설정이 아직 없습니다.')
+      return
+    }
+
+    if (!window.isSecureContext || !globalThis.crypto?.subtle) {
+      setAuthError('로그인은 HTTPS 또는 localhost에서만 가능합니다. 배포 주소에 HTTPS를 붙여야 합니다.')
       return
     }
 
