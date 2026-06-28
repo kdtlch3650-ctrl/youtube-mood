@@ -17,6 +17,10 @@ __pycache__/
 venv/
 .tmp/
 
+# Local backend debug logs
+backend/*.log
+backend/_debug-*.json
+
 # ML data
 ml/data/raw/*.tsv
 ml/data/kote_training_data.jsonl
