@@ -326,9 +326,49 @@ class OpenSearchSearchRecordRepository:
         return response
 
 
+class ResilientSearchRecordRepository:
+    def __init__(
+        self,
+        primary: SearchRecordRepository,
+        fallback: SearchRecordRepository,
+    ) -> None:
+        self._primary = primary
+        self._fallback = fallback
+        self._use_fallback = False
+
+    def _switch_to_fallback(self, exc: Exception) -> None:
+        # 운영 중 OpenSearch가 끊겨도 분석 요청이 500으로 죽지 않게 한다.
+        # 저장은 메모리에 남기고, 서비스 응답만 유지하는 안전장치다.
+        self._use_fallback = True
+        print(f'OpenSearch repository fallback enabled: {exc}')
+
+    def save(self, record: SearchRecord) -> SearchRecord:
+        if self._use_fallback:
+            return self._fallback.save(record)
+
+        try:
+            return self._primary.save(record)
+        except (requests.RequestException, RuntimeError, OSError, ValueError) as exc:
+            self._switch_to_fallback(exc)
+            return self._fallback.save(record)
+
+    def list(self, user_id: str | None = None) -> list[SearchRecord]:
+        if self._use_fallback:
+            return self._fallback.list(user_id)
+
+        try:
+            return self._primary.list(user_id)
+        except (requests.RequestException, RuntimeError, OSError, ValueError) as exc:
+            self._switch_to_fallback(exc)
+            return self._fallback.list(user_id)
+
+
 _repository: SearchRecordRepository
 if os.getenv('OPENSEARCH_ENDPOINT'):
-    _repository = OpenSearchSearchRecordRepository()
+    _repository = ResilientSearchRecordRepository(
+        OpenSearchSearchRecordRepository(),
+        InMemorySearchRecordRepository(),
+    )
 else:
     _repository = InMemorySearchRecordRepository()
 
