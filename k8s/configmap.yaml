@@ -5,5 +5,12 @@ metadata:
   namespace: youtube-mood
 data:
   AWS_REGION: "ap-northeast-2"
+  COGNITO_REGION: "ap-northeast-2"
+  COGNITO_USER_POOL_ID: ""
+  COGNITO_APP_CLIENT_ID: ""
+  OPENSEARCH_ENDPOINT: ""
+  OPENSEARCH_INDEX: "youtube-mood-search-records"
+  OPENSEARCH_REGION: "ap-northeast-2"
+  OPENSEARCH_SERVICE: "es"
   BEDROCK_ENABLED: "false"
   BEDROCK_MODEL_ID: "anthropic.claude-opus-4-7"
