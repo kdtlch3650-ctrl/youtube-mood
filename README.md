@@ -78,6 +78,15 @@ npm run dev -- --host 127.0.0.1 --port 5173
 http://127.0.0.1:5173
 ```
 
+빌드 결과를 확인할 때도 같은 주소를 사용합니다.
+
+```powershell
+npm run build
+npm run preview
+```
+
+`vite preview`도 5173으로 고정해 두었기 때문에, 개발 서버와 미리보기 화면이 같은 주소를 사용합니다.
+
 ## Docker 실행
 
 로컬에서 프론트와 백엔드를 함께 띄우려면 저장소 루트에서 실행한다.

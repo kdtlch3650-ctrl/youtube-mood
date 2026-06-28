@@ -24,6 +24,8 @@ npm run dev -- --host 127.0.0.1 --port 5173
 http://127.0.0.1:5173
 ```
 
+`npm run preview`로 빌드 결과를 확인할 때도 5173을 사용합니다.
+
 ## 빌드 확인
 
 ```powershell

@@ -145,6 +145,8 @@ const COGNITO_SCOPE = (import.meta.env.VITE_COGNITO_SCOPE ?? 'openid email profi
 const AUTH_SESSION_STORAGE_KEY = 'youtube-mood-auth-session'
 const AUTH_PKCE_VERIFIER_KEY = 'youtube-mood-auth-pkce-verifier'
 const AUTH_PKCE_STATE_KEY = 'youtube-mood-auth-pkce-state'
+const AUTH_PKCE_HANDLED_KEY = 'youtube-mood-auth-pkce-handled'
+
 const YOUTUBE_IFRAME_API_URL = 'https://www.youtube.com/iframe_api'
 const YOUTUBE_PLAYER_ELEMENT_ID = 'youtube-player-anchor'
 
@@ -259,17 +261,11 @@ function App() {
   const [duration, setDuration] = useState(0)
   const [keywordTooltip, setKeywordTooltip] = useState<KeywordTooltipState>(null)
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false)
-  const [authSession, setAuthSession] = useState<AuthSession | null>(() => {
-    try {
-      const cachedSession = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY)
-      return cachedSession ? (JSON.parse(cachedSession) as AuthSession) : null
-    } catch {
-      return null
-    }
-  })
+  const [authSessionState, setAuthSessionState] = useState<AuthSession | null>(null)
   const [authError, setAuthError] = useState('')
   const [isAuthenticating, setIsAuthenticating] = useState(false)
-  const keywordTooltipOpenTimerRef = useRef<number | null>(null)
+  const analysisModalOpenTimerRef = useRef<number | null>(null)
+  const authSession = authSessionState
   const isResultView = Boolean(analysisResult)
   const isHistoryView = screenMode === 'history'
   const recommendedTracks = analysisResult?.recommended_tracks ?? []
@@ -356,8 +352,13 @@ function App() {
   const isAuthConfigured = Boolean(COGNITO_DOMAIN && COGNITO_CLIENT_ID && COGNITO_REDIRECT_URI)
   const authLabel = authSession?.user.email || authSession?.user.name || 'Google 로그인'
 
+  useEffect(() => {
+    window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY)
+    setAuthSessionState(null)
+  }, [])
+
   const persistAuthSession = (session: AuthSession | null) => {
-    setAuthSession(session)
+    setAuthSessionState(session)
     if (session) {
       window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session))
       return
@@ -369,6 +370,7 @@ function App() {
   const clearAuthState = () => {
     window.sessionStorage.removeItem(AUTH_PKCE_VERIFIER_KEY)
     window.sessionStorage.removeItem(AUTH_PKCE_STATE_KEY)
+    window.sessionStorage.removeItem(AUTH_PKCE_HANDLED_KEY)
   }
 
   const buildAuthHeaders = (): Record<string, string> => {
@@ -414,7 +416,19 @@ function App() {
     })
 
     if (!response.ok) {
-      throw new Error('로그인 토큰 교환에 실패했습니다.')
+      const responseText = await response.text()
+      let errorDetail = responseText.trim()
+
+      try {
+        const parsed = JSON.parse(responseText) as { error?: string; error_description?: string }
+        errorDetail = [parsed.error, parsed.error_description].filter(Boolean).join(': ')
+      } catch {
+        // 응답이 JSON이 아닐 수 있어서 원문을 그대로 사용한다.
+      }
+
+      throw new Error(
+        errorDetail ? `로그인 토큰 교환에 실패했습니다. ${errorDetail}` : '로그인 토큰 교환에 실패했습니다.',
+      )
     }
 
     const tokenPayload = (await response.json()) as {
@@ -471,6 +485,7 @@ function App() {
 
       window.sessionStorage.setItem(AUTH_PKCE_VERIFIER_KEY, codeVerifier)
       window.sessionStorage.setItem(AUTH_PKCE_STATE_KEY, state)
+      window.sessionStorage.removeItem(AUTH_PKCE_HANDLED_KEY)
 
       const authorizeUrl = new URL(`${COGNITO_DOMAIN}/oauth2/authorize`)
       authorizeUrl.searchParams.set('client_id', COGNITO_CLIENT_ID)
@@ -480,7 +495,6 @@ function App() {
       authorizeUrl.searchParams.set('state', state)
       authorizeUrl.searchParams.set('code_challenge_method', 'S256')
       authorizeUrl.searchParams.set('code_challenge', codeChallenge)
-      authorizeUrl.searchParams.set('identity_provider', 'Google')
 
       window.location.assign(authorizeUrl.toString())
     } catch (error) {
@@ -505,11 +519,11 @@ function App() {
 
   useEffect(() => {
     return () => {
-      if (keywordTooltipOpenTimerRef.current) {
-        window.clearTimeout(keywordTooltipOpenTimerRef.current)
-      }
       if (analysisModalCloseTimerRef.current) {
         window.clearTimeout(analysisModalCloseTimerRef.current)
+      }
+      if (analysisModalOpenTimerRef.current) {
+        window.clearTimeout(analysisModalOpenTimerRef.current)
       }
     }
   }, [])
@@ -523,7 +537,7 @@ function App() {
 
     const loadSearchRecords = async () => {
       try {
-        const response = await fetch(apiUrl('/search-records'), {
+        const response = await fetch(apiUrl('/api/search-records'), {
           headers: {
             ...buildAuthHeaders(),
           },
@@ -579,7 +593,7 @@ function App() {
     const loadPlaylistTracks = async () => {
       try {
         const response = await fetch(
-          apiUrl(`/playlists/${encodeURIComponent(activePlaylist.id)}/tracks?${query.toString()}`),
+          apiUrl(`/api/playlists/${encodeURIComponent(activePlaylist.id)}/tracks?${query.toString()}`),
           {
             headers: {
               ...buildAuthHeaders(),
@@ -640,6 +654,12 @@ function App() {
     if (!code && !authErrorCode) {
       return
     }
+
+    const handledKey = [code ?? '', returnedState ?? '', authErrorCode ?? ''].join('|')
+    if (window.sessionStorage.getItem(AUTH_PKCE_HANDLED_KEY) === handledKey) {
+      return
+    }
+    window.sessionStorage.setItem(AUTH_PKCE_HANDLED_KEY, handledKey)
 
     const handleCallback = async () => {
       setIsAuthenticating(true)
@@ -749,7 +769,7 @@ function App() {
     setErrorMessage('')
 
     try {
-      const response = await fetch(apiUrl('/analyze'), {
+      const response = await fetch(apiUrl('/api/analyze'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -759,7 +779,19 @@ function App() {
       })
 
       if (!response.ok) {
-        throw new Error('분석 요청에 실패했습니다.')
+        const responseText = await response.text()
+        let errorDetail = responseText.trim()
+
+        try {
+          const parsed = JSON.parse(responseText) as { detail?: string; message?: string }
+          errorDetail = parsed.detail ?? parsed.message ?? errorDetail
+        } catch {
+          // 텍스트 응답이면 원문을 그대로 보여준다.
+        }
+
+        throw new Error(
+          errorDetail ? `분석 요청에 실패했습니다. ${errorDetail}` : '분석 요청에 실패했습니다.',
+        )
       }
 
       const result: AnalyzeResult = await response.json()
@@ -773,8 +805,12 @@ function App() {
       setCurrentTime(0)
       setDuration(0)
       setInputText('')
-    } catch {
-      setErrorMessage('분석 결과를 불러오지 못했습니다. 백엔드 서버를 확인해 주세요.')
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : '분석 결과를 불러오지 못했습니다. 백엔드 서버를 확인해 주세요.',
+      )
     } finally {
       setIsLoading(false)
     }
@@ -799,15 +835,8 @@ function App() {
   }
 
   const openKeywordTooltip = (label: string, value: string, event: MouseEvent<HTMLDivElement>) => {
-    if (keywordTooltipOpenTimerRef.current) {
-      window.clearTimeout(keywordTooltipOpenTimerRef.current)
-    }
-
     const position = getKeywordTooltipPosition(event.clientX, event.clientY)
-    keywordTooltipOpenTimerRef.current = window.setTimeout(() => {
-      setKeywordTooltip({ label, value, ...position })
-      keywordTooltipOpenTimerRef.current = null
-    }, 2000)
+    setKeywordTooltip({ label, value, ...position })
   }
 
   const moveKeywordTooltip = (value: string, event: MouseEvent<HTMLDivElement>) => {
@@ -825,22 +854,26 @@ function App() {
   }
 
   const closeKeywordTooltip = () => {
-    if (keywordTooltipOpenTimerRef.current) {
-      window.clearTimeout(keywordTooltipOpenTimerRef.current)
-      keywordTooltipOpenTimerRef.current = null
-    }
     setKeywordTooltip(null)
   }
 
-  const openAnalysisModal = () => {
-    if (analysisModalCloseTimerRef.current) {
-      window.clearTimeout(analysisModalCloseTimerRef.current)
-      analysisModalCloseTimerRef.current = null
+  const scheduleAnalysisModalOpen = () => {
+    if (analysisModalOpenTimerRef.current) {
+      window.clearTimeout(analysisModalOpenTimerRef.current)
     }
-    setIsAnalysisModalOpen(true)
+
+    analysisModalOpenTimerRef.current = window.setTimeout(() => {
+      setIsAnalysisModalOpen(true)
+      analysisModalOpenTimerRef.current = null
+    }, 2000)
   }
 
   const closeAnalysisModal = () => {
+    if (analysisModalOpenTimerRef.current) {
+      window.clearTimeout(analysisModalOpenTimerRef.current)
+      analysisModalOpenTimerRef.current = null
+    }
+
     if (analysisModalCloseTimerRef.current) {
       window.clearTimeout(analysisModalCloseTimerRef.current)
     }
@@ -944,7 +977,7 @@ function App() {
     const searchKeywords = source?.search_keywords?.length ? source.search_keywords.join(', ') : '없음'
 
     return (
-      <div className="analysis-modal-backdrop" role="presentation" onMouseEnter={openAnalysisModal} onMouseLeave={closeAnalysisModal}>
+      <div className="analysis-modal-backdrop" role="presentation" onMouseEnter={scheduleAnalysisModalOpen} onMouseLeave={closeAnalysisModal}>
         <div className="analysis-modal" role="dialog" aria-modal="false" aria-label="분석 요약">
           <p className="analysis-modal-eyebrow">Mood based music recommendation</p>
           <h2>{analysisModalTitle}</h2>
@@ -1642,8 +1675,12 @@ function App() {
                 <h2>Keywords</h2>
                 <div
                   className="mood-card history-keyword-card"
-                  onMouseEnter={(event) => openKeywordTooltip('감정', selectedRecord?.emotions.join(', ') || '없음', event)}
-                  onMouseMove={(event) => moveKeywordTooltip(selectedRecord?.emotions.join(', ') || '없음', event)}
+                  onMouseEnter={(event) =>
+                    openKeywordTooltip('감정', selectedRecord?.emotions.join(', ') || '없음', event)
+                  }
+                  onMouseMove={(event) =>
+                    moveKeywordTooltip(selectedRecord?.emotions.join(', ') || '없음', event)
+                  }
                   onMouseLeave={closeKeywordTooltip}
                 >
                   <strong>감정</strong>
@@ -1651,7 +1688,9 @@ function App() {
                 </div>
                 <div
                   className="mood-card history-keyword-card"
-                  onMouseEnter={(event) => openKeywordTooltip('분위기', selectedRecord?.mood_tags.join(', ') || '없음', event)}
+                  onMouseEnter={(event) =>
+                    openKeywordTooltip('분위기', selectedRecord?.mood_tags.join(', ') || '없음', event)
+                  }
                   onMouseMove={(event) => moveKeywordTooltip(selectedRecord?.mood_tags.join(', ') || '없음', event)}
                   onMouseLeave={closeKeywordTooltip}
                 >
@@ -1660,29 +1699,49 @@ function App() {
                 </div>
                 <div
                   className="mood-card history-keyword-card"
-                  onMouseEnter={(event) => openKeywordTooltip('검색어', selectedRecord?.search_keywords.join(', ') || '없음', event)}
-                  onMouseMove={(event) => moveKeywordTooltip(selectedRecord?.search_keywords.join(', ') || '없음', event)}
+                  onMouseEnter={(event) =>
+                    openKeywordTooltip('검색어', selectedRecord?.search_keywords.join(', ') || '없음', event)
+                  }
+                  onMouseMove={(event) =>
+                    moveKeywordTooltip(selectedRecord?.search_keywords.join(', ') || '없음', event)
+                  }
                   onMouseLeave={closeKeywordTooltip}
                 >
                   <strong>검색어</strong>
                   <p>{selectedRecord?.search_keywords.join(', ') || '없음'}</p>
                 </div>
               </section>
-              {keywordTooltip && (
-                <div
-                  className="keyword-floating-tooltip"
-                  style={{
-                    left: `${keywordTooltip.left}px`,
-                    top: `${keywordTooltip.top}px`,
-                  }}
-                >
-                  <strong>{keywordTooltip.label}</strong>
-                  <p>{keywordTooltip.value}</p>
-                </div>
-              )}
             </div>
+            {keywordTooltip && (
+              <div
+                className="keyword-floating-tooltip"
+                style={{
+                  left: keywordTooltip.left,
+                  top: keywordTooltip.top,
+                }}
+              >
+                <span>{keywordTooltip.label}</span>
+                <strong>{keywordTooltip.value}</strong>
+              </div>
+            )}
           </section>
           {renderPlayerBar()}
+        </section>
+      </main>
+    )
+  }
+
+  if (!authSession) {
+    return (
+      <main className="app-shell auth-gate-shell">
+        <section className="auth-gate-card" aria-labelledby="auth-gate-title">
+          <p className="auth-gate-badge">Login required</p>
+          <h1 id="auth-gate-title">먼저 로그인한 뒤 음악 추천을 시작하세요</h1>
+          <p className="auth-gate-copy">
+            이 서비스는 로그인 후 검색 기록 저장과 추천 결과 활용을 지원합니다.
+          </p>
+          {renderAuthControls()}
+          {authError && <p className="auth-error">{authError}</p>}
         </section>
       </main>
     )
@@ -1698,7 +1757,7 @@ function App() {
             <button
               type="button"
               className="eyebrow eyebrow-button"
-              onMouseEnter={openAnalysisModal}
+              onMouseEnter={scheduleAnalysisModalOpen}
               onMouseLeave={closeAnalysisModal}
             >
               Mood based music recommendation
@@ -1746,7 +1805,7 @@ function App() {
               <button
                 type="button"
                 className="eyebrow eyebrow-button"
-                onMouseEnter={openAnalysisModal}
+                onMouseEnter={scheduleAnalysisModalOpen}
                 onMouseLeave={closeAnalysisModal}
               >
                 Mood based music recommendation
@@ -1919,5 +1978,7 @@ function App() {
 }
 
 export default App
+
+
 
 

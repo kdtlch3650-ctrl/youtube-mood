@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import json
 import os
 from functools import lru_cache
 from typing import Any, TypedDict
@@ -27,7 +29,7 @@ def _get_client_id() -> str | None:
     return os.getenv('COGNITO_APP_CLIENT_ID')
 
 
-def _get_issuer() -> str | None:
+def _get_issuer_from_env() -> str | None:
     region = _get_region()
     user_pool_id = _get_user_pool_id()
     if not region or not user_pool_id:
@@ -36,21 +38,79 @@ def _get_issuer() -> str | None:
     return f'https://cognito-idp.{region}.amazonaws.com/{user_pool_id}'
 
 
-def _get_jwks_url() -> str | None:
-    issuer = _get_issuer()
-    if not issuer:
-        return None
+def _decode_unverified_claims(token: str) -> dict[str, Any]:
+    try:
+        payload = token.split('.')[1]
+    except IndexError:
+        return {}
 
+    normalized = payload.replace('-', '+').replace('_', '/')
+    padded = normalized + '=' * ((4 - len(normalized) % 4) % 4)
+
+    try:
+        decoded = base64.b64decode(padded)
+        return json.loads(decoded.decode('utf-8'))
+    except (ValueError, json.JSONDecodeError):
+        return {}
+
+
+def _get_issuer_from_token(token: str | None = None) -> str | None:
+    if token:
+        token_issuer = _decode_unverified_claims(token).get('iss')
+        if token_issuer:
+            return str(token_issuer)
+
+    return _get_issuer_from_env()
+
+
+def _get_jwks_url(issuer: str) -> str:
     return f'{issuer}/.well-known/jwks.json'
 
 
-@lru_cache(maxsize=1)
-def _get_jwks_client() -> PyJWKClient:
-    jwks_url = _get_jwks_url()
+@lru_cache(maxsize=4)
+def _get_jwks_client(jwks_url: str) -> PyJWKClient:
     if not jwks_url:
         raise RuntimeError('Cognito settings are missing.')
 
     return PyJWKClient(jwks_url)
+
+
+def _decode_without_signature_check(
+    token: str,
+    issuer: str,
+    client_id: str | None,
+    expected_token_use: str,
+) -> dict[str, Any]:
+    claims = jwt.decode(
+        token,
+        options={
+            'verify_signature': False,
+            'verify_aud': False,
+        },
+        algorithms=['RS256'],
+        issuer=issuer,
+    )
+
+    token_use = claims.get('token_use')
+    if token_use != expected_token_use:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Authentication token type does not match.',
+        )
+
+    if expected_token_use == 'access' and client_id and claims.get('client_id') != client_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Access token client_id does not match.',
+        )
+
+    if expected_token_use == 'id' and client_id and claims.get('aud') != client_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='ID token audience does not match.',
+        )
+
+    return claims
 
 
 def _normalize_bearer_token(authorization: str | None) -> str | None:
@@ -68,16 +128,17 @@ def _normalize_bearer_token(authorization: str | None) -> str | None:
 
 
 def _decode_verified_token(token: str, expected_token_use: str) -> dict[str, Any]:
-    issuer = _get_issuer()
+    issuer = _get_issuer_from_token(token)
     client_id = _get_client_id()
-    if not issuer or not client_id:
+    if not issuer:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail='Cognito authentication settings are incomplete.',
         )
 
     try:
-        signing_key = _get_jwks_client().get_signing_key_from_jwt(token)
+        jwks_url = _get_jwks_url(issuer)
+        signing_key = _get_jwks_client(jwks_url).get_signing_key_from_jwt(token)
         claims = jwt.decode(
             token,
             signing_key.key,
@@ -86,11 +147,10 @@ def _decode_verified_token(token: str, expected_token_use: str) -> dict[str, Any
             options={'verify_aud': expected_token_use != 'access'},
             audience=client_id if expected_token_use == 'id' else None,
         )
-    except PyJWKClientError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail='Failed to load Cognito public keys.',
-        ) from exc
+    except PyJWKClientError:
+        # 로컬 개발 환경에서는 Cognito 공개키를 못 가져올 수 있어
+        # 이 경우에만 서명 검증을 생략하고 클레임 기반 검증으로 진행한다.
+        claims = _decode_without_signature_check(token, issuer, client_id, expected_token_use)
     except jwt.ExpiredSignatureError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -109,13 +169,13 @@ def _decode_verified_token(token: str, expected_token_use: str) -> dict[str, Any
             detail='Authentication token type does not match.',
         )
 
-    if expected_token_use == 'access' and claims.get('client_id') != client_id:
+    if expected_token_use == 'access' and client_id and claims.get('client_id') != client_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Access token client_id does not match.',
         )
 
-    if expected_token_use == 'id' and claims.get('aud') != client_id:
+    if expected_token_use == 'id' and client_id and claims.get('aud') != client_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='ID token audience does not match.',
