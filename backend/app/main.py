@@ -4,10 +4,9 @@ from itertools import count
 
 import os
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.cognito_auth import AuthenticatedUser, get_authenticated_user
 from app.ai.predict import predict_analysis
 from app.schemas import AnalyzeRequest, AnalyzeResponse, PlaylistTrackItem, SearchRecord
 from app.search_record_factory import build_search_record
@@ -25,6 +24,16 @@ def _get_environment_name() -> str:
         return "prod"
 
     return "local"
+
+
+def _get_request_session_id(
+    x_app_session_id: str | None = Header(default=None, alias='X-App-Session-Id'),
+) -> str | None:
+    if not x_app_session_id:
+        return None
+
+    session_id = x_app_session_id.strip()
+    return session_id or None
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,7 +98,7 @@ def _build_analyze_response(request: AnalyzeRequest) -> AnalyzeResponse:
 def _create_record(
     response: AnalyzeResponse,
     search_scope: str,
-    user: AuthenticatedUser | None = None,
+    session_id: str | None = None,
 ) -> SearchRecord:
     record_id = f"record-{next(_record_sequence)}"
     created_at = datetime.now(timezone.utc).isoformat()
@@ -98,26 +107,25 @@ def _create_record(
         created_at,
         response,
         search_scope,
-        user_id=user['user_id'] if user else None,
-        user_email=user['user_email'] if user else None,
+        user_id=session_id,
     )
 
 
 @app.post("/api/analyze")
 def analyze_text(
     request: AnalyzeRequest,
-    user: AuthenticatedUser | None = Depends(get_authenticated_user),
+    session_id: str | None = Header(default=None, alias='X-App-Session-Id'),
 ) -> AnalyzeResponse:
     response = _build_analyze_response(request)
-    save_search_record(_create_record(response, request.search_scope, user))
+    save_search_record(_create_record(response, request.search_scope, _get_request_session_id(session_id)))
     return response
 
 
 @app.get("/api/search-records")
 def get_search_records(
-    user: AuthenticatedUser | None = Depends(get_authenticated_user),
+    session_id: str | None = Header(default=None, alias='X-App-Session-Id'),
 ) -> list[SearchRecord]:
-    return list_search_records(user['user_id'] if user else None)
+    return list_search_records(_get_request_session_id(session_id))
 
 
 @app.get("/api/playlists/{playlist_id}/tracks")
