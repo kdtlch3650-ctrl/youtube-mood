@@ -1329,17 +1329,16 @@
 }
 
 .history-toolbar {
-  align-items: stretch;
-  flex-direction: column;
-  gap: 16px;
+  align-items: start;
 }
 
 .history-search-form {
   align-items: center;
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
   gap: 10px;
-  width: min(100%, 820px);
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-width: 340px;
+  width: min(100%, 760px);
 }
 
 .history-search-form button {
@@ -1365,21 +1364,19 @@
   border-radius: 999px;
   color: var(--text);
   font: inherit;
-  flex: 1 1 auto;
   min-width: 0;
   padding: 13px 18px;
+  width: 100%;
 }
 
 .history-toolbar .toolbar-actions {
   align-items: center;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 12px;
+  justify-content: space-between;
   width: 100%;
 }
 
-.history-toolbar .toolbar-actions > .auth-actions {
-  align-self: flex-end;
+.history-search-form .scope-switch {
+  flex-shrink: 0;
 }
 
 .history-search-form input::placeholder {
