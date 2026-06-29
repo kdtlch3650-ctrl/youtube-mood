@@ -497,6 +497,35 @@ function App() {
     persistAuthSession(null)
   }
 
+  const refreshSearchRecords = async (signal?: AbortSignal, forceSelectLatest = false) => {
+    const response = await fetch(apiUrl('/search-records'), {
+      headers: {
+        ...buildRequestHeaders(),
+      },
+      signal,
+    })
+
+    if (!response.ok) {
+      return
+    }
+
+    const records: SearchRecord[] = await response.json()
+    setSearchRecords(records)
+    setSelectedRecordId((currentId) => {
+      if (!records.length) {
+        return null
+      }
+
+      if (forceSelectLatest) {
+        return records[0]?.id ?? null
+      }
+
+      return currentId && records.some((record) => record.id === currentId)
+        ? currentId
+        : records[0]?.id ?? null
+    })
+  }
+
   useEffect(() => {
     const storedSession = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY)
     if (!storedSession) {
@@ -528,36 +557,12 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!isHistoryView || !authSession) {
+    if (!isHistoryView) {
       return
     }
 
     const abortController = new AbortController()
-
-    const loadSearchRecords = async () => {
-      try {
-        const response = await fetch(apiUrl('/search-records'), {
-          headers: {
-            ...buildRequestHeaders(),
-          },
-          signal: abortController.signal,
-        })
-
-        if (!response.ok) {
-          return
-        }
-
-        const records: SearchRecord[] = await response.json()
-        setSearchRecords(records)
-        setSelectedRecordId((currentId) => currentId ?? records[0]?.id ?? null)
-      } catch (error) {
-        if (!abortController.signal.aborted) {
-          console.error(error)
-        }
-      }
-    }
-
-    void loadSearchRecords()
+    void refreshSearchRecords(abortController.signal)
 
     return () => {
       abortController.abort()
@@ -766,6 +771,7 @@ function App() {
       setCurrentTime(0)
       setDuration(0)
       setInputText('')
+      void refreshSearchRecords(undefined, true)
     } catch (error) {
       setErrorMessage(
         error instanceof Error
