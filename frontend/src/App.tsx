@@ -1501,8 +1501,8 @@ function App() {
                 <h1 id="history-title">기록 보기</h1>
               </div>
               <div className="toolbar-actions">
-                <form className="history-search-form" onSubmit={(event) => event.preventDefault()}>
-                  <label htmlFor="history-search-input" className="sr-only">
+                <form className="result-search-form history-search-form" onSubmit={(event) => event.preventDefault()}>
+                  <label htmlFor="history-search-input">
                     기록 검색
                   </label>
                   <input
@@ -1511,8 +1511,8 @@ function App() {
                     onChange={(event) => setHistorySearchText(event.target.value)}
                     placeholder="기록 검색"
                   />
-                  <button type="submit">검색</button>
                   {renderSearchScopeSwitch()}
+                  <button type="submit">검색</button>
                 </form>
                 {renderAuthControls()}
                 {renderEnvironmentBadge()}
