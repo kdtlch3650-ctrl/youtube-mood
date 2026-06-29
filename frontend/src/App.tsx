@@ -126,7 +126,25 @@ declare global {
   interface Window {
     YT?: YouTubeApi
     onYouTubeIframeAPIReady?: () => void
+    google?: {
+      accounts?: {
+        id?: {
+          initialize: (config: {
+            client_id: string
+            callback: (response: { credential?: string }) => void
+            auto_select?: boolean
+          }) => void
+          renderButton: (parent: HTMLElement, options: { theme?: string; size?: string; shape?: string; text?: string }) => void
+        }
+      }
+    }
   }
+}
+
+type GoogleLoginButtonProps = {
+  clientId: string
+  onCredential: (credential: string) => void
+  onError: (message: string) => void
 }
 
 const samplePlaylistTracks = [
@@ -137,18 +155,12 @@ const samplePlaylistTracks = [
   '다섯 번째 추천 트랙',
 ]
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '')
-const COGNITO_DOMAIN = (import.meta.env.VITE_COGNITO_DOMAIN ?? '').replace(/\/$/, '')
-const COGNITO_CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID ?? ''
-const COGNITO_REDIRECT_URI = import.meta.env.VITE_COGNITO_REDIRECT_URI ?? window.location.origin
-const COGNITO_LOGOUT_URI = import.meta.env.VITE_COGNITO_LOGOUT_URI ?? COGNITO_REDIRECT_URI
-const COGNITO_SCOPE = (import.meta.env.VITE_COGNITO_SCOPE ?? 'openid email profile').trim()
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
+const GOOGLE_LOGIN_SCRIPT_URL = 'https://accounts.google.com/gsi/client'
 const APP_ENV = (import.meta.env.VITE_APP_ENV ?? 'local').trim().toLowerCase()
 const ENVIRONMENT_LABEL = APP_ENV === 'prod' || APP_ENV === 'production' ? 'PROD' : 'LOCAL'
 const APP_SESSION_STORAGE_KEY = 'youtube-mood-session-id'
 const AUTH_SESSION_STORAGE_KEY = 'youtube-mood-auth-session'
-const AUTH_PKCE_VERIFIER_KEY = 'youtube-mood-auth-pkce-verifier'
-const AUTH_PKCE_STATE_KEY = 'youtube-mood-auth-pkce-state'
-const AUTH_PKCE_HANDLED_KEY = 'youtube-mood-auth-pkce-handled'
 
 const YOUTUBE_IFRAME_API_URL = 'https://www.youtube.com/iframe_api'
 const YOUTUBE_PLAYER_ELEMENT_ID = 'youtube-player-anchor'
@@ -196,6 +208,84 @@ const getOrCreateAppSessionId = () => {
   const sessionId = createAppSessionId()
   window.localStorage.setItem(APP_SESSION_STORAGE_KEY, sessionId)
   return sessionId
+}
+
+function GoogleLoginButton({ clientId, onCredential, onError }: GoogleLoginButtonProps) {
+  const buttonRef = useRef<HTMLDivElement>(null)
+  const onCredentialRef = useRef(onCredential)
+  const onErrorRef = useRef(onError)
+
+  useEffect(() => {
+    onCredentialRef.current = onCredential
+    onErrorRef.current = onError
+  }, [onCredential, onError])
+
+  useEffect(() => {
+    if (!clientId) {
+      onErrorRef.current('Google Client ID가 설정되지 않았습니다.')
+      return
+    }
+
+    let disposed = false
+
+    const renderGoogleButton = () => {
+      if (disposed || !buttonRef.current || !window.google?.accounts?.id) {
+        return
+      }
+
+      buttonRef.current.innerHTML = ''
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response) => {
+          const credential = response.credential?.trim()
+          if (!credential) {
+            onErrorRef.current('Google 로그인 응답을 받을 수 없습니다.')
+            return
+          }
+
+          onCredentialRef.current(credential)
+        },
+      })
+
+      window.google.accounts.id.renderButton(buttonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        shape: 'pill',
+        text: 'signin_with',
+      })
+    }
+
+    const existingScript = document.querySelector(`script[src="${GOOGLE_LOGIN_SCRIPT_URL}"]`) as HTMLScriptElement | null
+    if (window.google?.accounts?.id) {
+      renderGoogleButton()
+      return () => {
+        disposed = true
+      }
+    }
+
+    if (existingScript) {
+      existingScript.addEventListener('load', renderGoogleButton, { once: true })
+      return () => {
+        disposed = true
+      }
+    }
+
+    const script = document.createElement('script')
+    script.src = GOOGLE_LOGIN_SCRIPT_URL
+    script.async = true
+    script.defer = true
+    script.onload = renderGoogleButton
+    script.onerror = () => {
+      onErrorRef.current('Google 로그인 스크립트를 불러오지 못했습니다.')
+    }
+    document.body.appendChild(script)
+
+    return () => {
+      disposed = true
+    }
+  }, [clientId])
+
+  return <div className="google-login-slot" ref={buttonRef} />
 }
 
 function App() {
@@ -253,7 +343,6 @@ function App() {
   const [appSessionId] = useState(() => getOrCreateAppSessionId())
   const [authSessionState, setAuthSessionState] = useState<AuthSession | null>(null)
   const [authError, setAuthError] = useState('')
-  const [isAuthenticating, setIsAuthenticating] = useState(false)
   const analysisModalOpenTimerRef = useRef<number | null>(null)
   const authSession = authSessionState
   const isResultView = Boolean(analysisResult)
@@ -339,7 +428,6 @@ function App() {
   const analysisModalTitle = isHistoryView
     ? selectedRecord?.input_text ?? '기록 상세'
     : analysisResult?.input_text ?? (inputText.trim() || 'Mood based music recommendation')
-  const isAuthConfigured = Boolean(COGNITO_DOMAIN && COGNITO_CLIENT_ID && COGNITO_REDIRECT_URI)
   const authLabel = authSession?.user.email || authSession?.user.name || 'Google 로그인'
 
   const persistAuthSession = (session: AuthSession | null) => {
@@ -350,12 +438,6 @@ function App() {
     }
 
     window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY)
-  }
-
-  const clearAuthState = () => {
-    window.sessionStorage.removeItem(AUTH_PKCE_VERIFIER_KEY)
-    window.sessionStorage.removeItem(AUTH_PKCE_STATE_KEY)
-    window.sessionStorage.removeItem(AUTH_PKCE_HANDLED_KEY)
   }
 
   const decodeJwtPayload = (token: string) => {
@@ -374,103 +456,33 @@ function App() {
     }
   }
 
-  const encodeBase64Url = (bytes: Uint8Array) =>
-    btoa(String.fromCharCode(...bytes))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/u, '')
-
-  const createCodeVerifier = () => {
-    const randomBytes = new Uint8Array(32)
-    crypto.getRandomValues(randomBytes)
-    return encodeBase64Url(randomBytes)
-  }
-
-  const createCodeChallenge = async (verifier: string) => {
-    const encoded = new TextEncoder().encode(verifier)
-    const digest = await crypto.subtle.digest('SHA-256', encoded)
-    return encodeBase64Url(new Uint8Array(digest))
-  }
-
   const buildRequestHeaders = (): Record<string, string> => {
     const headers: Record<string, string> = {
       'X-App-Session-Id': authSession?.user.sub || authSession?.user.email || appSessionId,
     }
 
-    if (authSession?.accessToken) {
-      headers.Authorization = `Bearer ${authSession.accessToken}`
-    }
-
-    if (authSession?.idToken) {
-      headers['X-Cognito-Id-Token'] = authSession.idToken
+    if (authSession?.idToken || authSession?.accessToken) {
+      headers.Authorization = `Bearer ${authSession.idToken || authSession.accessToken}`
     }
 
     return headers
   }
 
-  const finishAuthCallback = async (code: string, returnedState: string | null) => {
-    const storedState = window.sessionStorage.getItem(AUTH_PKCE_STATE_KEY)
-    const codeVerifier = window.sessionStorage.getItem(AUTH_PKCE_VERIFIER_KEY)
-
-    if (!storedState || !codeVerifier || storedState !== returnedState) {
-      throw new Error('로그인 상태를 확인할 수 없습니다. 다시 시도해 주세요.')
-    }
-
-    if (!isAuthConfigured) {
-      throw new Error('Cognito 설정이 부족합니다.')
-    }
-
-    const response = await fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: COGNITO_CLIENT_ID,
-        code,
-        code_verifier: codeVerifier,
-        redirect_uri: COGNITO_REDIRECT_URI,
-      }).toString(),
-    })
-
-    if (!response.ok) {
-      const responseText = await response.text()
-      let errorDetail = responseText.trim()
-
-      try {
-        const parsed = JSON.parse(responseText) as { error?: string; error_description?: string }
-        errorDetail = [parsed.error, parsed.error_description].filter(Boolean).join(': ')
-      } catch {
-        // 응답이 JSON이 아닐 수 있어서 원문을 그대로 사용한다.
-      }
-
-      throw new Error(
-        errorDetail ? `로그인 토큰 교환에 실패했습니다. ${errorDetail}` : '로그인 토큰 교환에 실패했습니다.',
-      )
-    }
-
-    const tokenPayload = (await response.json()) as {
-      access_token?: string
-      id_token?: string
-      expires_in?: number
-    }
-
-    if (!tokenPayload.access_token || !tokenPayload.id_token) {
-      throw new Error('로그인 토큰을 받을 수 없습니다.')
-    }
-
-    const decoded = decodeJwtPayload(tokenPayload.id_token) as {
+  const handleGoogleCredential = (credential: string) => {
+    const decoded = decodeJwtPayload(credential) as {
       email?: string
       name?: string
       picture?: string
       sub?: string
+      exp?: number
     }
 
+    const expiresAt = typeof decoded.exp === 'number' ? decoded.exp * 1000 : Date.now() + 60 * 60 * 1000
+
     persistAuthSession({
-      accessToken: tokenPayload.access_token,
-      idToken: tokenPayload.id_token,
-      expiresAt: Date.now() + (tokenPayload.expires_in ?? 0) * 1000,
+      accessToken: credential,
+      idToken: credential,
+      expiresAt,
       user: {
         email: decoded.email,
         name: decoded.name,
@@ -478,62 +490,11 @@ function App() {
         sub: decoded.sub,
       },
     })
-    clearAuthState()
-
-    const cleanUrl = new URL(window.location.href)
-    cleanUrl.searchParams.delete('code')
-    cleanUrl.searchParams.delete('state')
-    cleanUrl.searchParams.delete('error')
-    cleanUrl.searchParams.delete('error_description')
-    window.history.replaceState({}, '', cleanUrl.toString())
-  }
-
-  const startGoogleLogin = async () => {
-    if (!isAuthConfigured) {
-      setAuthError('Cognito 설정이 아직 없습니다.')
-      return
-    }
-
     setAuthError('')
-    setIsAuthenticating(true)
-
-    try {
-      const codeVerifier = createCodeVerifier()
-      const codeChallenge = await createCodeChallenge(codeVerifier)
-      const state = createCodeVerifier()
-
-      window.sessionStorage.setItem(AUTH_PKCE_VERIFIER_KEY, codeVerifier)
-      window.sessionStorage.setItem(AUTH_PKCE_STATE_KEY, state)
-      window.sessionStorage.removeItem(AUTH_PKCE_HANDLED_KEY)
-
-      const authorizeUrl = new URL(`${COGNITO_DOMAIN}/oauth2/authorize`)
-      authorizeUrl.searchParams.set('client_id', COGNITO_CLIENT_ID)
-      authorizeUrl.searchParams.set('response_type', 'code')
-      authorizeUrl.searchParams.set('scope', COGNITO_SCOPE)
-      authorizeUrl.searchParams.set('redirect_uri', COGNITO_REDIRECT_URI)
-      authorizeUrl.searchParams.set('state', state)
-      authorizeUrl.searchParams.set('code_challenge_method', 'S256')
-      authorizeUrl.searchParams.set('code_challenge', codeChallenge)
-
-      window.location.assign(authorizeUrl.toString())
-    } catch (error) {
-      setIsAuthenticating(false)
-      setAuthError(error instanceof Error ? error.message : '로그인을 시작할 수 없습니다.')
-    }
   }
 
   const handleLogout = () => {
     persistAuthSession(null)
-    clearAuthState()
-
-    if (!isAuthConfigured) {
-      return
-    }
-
-    const logoutUrl = new URL(`${COGNITO_DOMAIN}/logout`)
-    logoutUrl.searchParams.set('client_id', COGNITO_CLIENT_ID)
-    logoutUrl.searchParams.set('logout_uri', COGNITO_LOGOUT_URI)
-    window.location.assign(logoutUrl.toString())
   }
 
   useEffect(() => {
@@ -544,53 +505,15 @@ function App() {
 
     try {
       const parsedSession = JSON.parse(storedSession) as AuthSession
+      if (parsedSession.expiresAt && parsedSession.expiresAt <= Date.now()) {
+        window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY)
+        return
+      }
+
       setAuthSessionState(parsedSession)
     } catch {
       window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY)
     }
-  }, [])
-
-  useEffect(() => {
-    const currentUrl = new URL(window.location.href)
-    const code = currentUrl.searchParams.get('code')
-    const returnedState = currentUrl.searchParams.get('state')
-    const authErrorCode = currentUrl.searchParams.get('error')
-    const authErrorDescription = currentUrl.searchParams.get('error_description')
-
-    if (!code && !authErrorCode) {
-      return
-    }
-
-    const handledKey = [code ?? '', returnedState ?? '', authErrorCode ?? ''].join('|')
-    if (window.sessionStorage.getItem(AUTH_PKCE_HANDLED_KEY) === handledKey) {
-      return
-    }
-    window.sessionStorage.setItem(AUTH_PKCE_HANDLED_KEY, handledKey)
-
-    const handleCallback = async () => {
-      setIsAuthenticating(true)
-      setAuthError('')
-
-      try {
-        if (authErrorCode) {
-          throw new Error(authErrorDescription || '로그인이 취소되었거나 실패했습니다.')
-        }
-
-        if (!code) {
-          throw new Error('로그인 코드를 확인할 수 없습니다.')
-        }
-
-        await finishAuthCallback(code, returnedState)
-      } catch (error) {
-        persistAuthSession(null)
-        clearAuthState()
-        setAuthError(error instanceof Error ? error.message : '로그인 처리 중 오류가 발생했습니다.')
-      } finally {
-        setIsAuthenticating(false)
-      }
-    }
-
-    void handleCallback()
   }, [])
 
   useEffect(() => {
@@ -1001,14 +924,7 @@ function App() {
           </button>
         </>
       ) : (
-        <button
-          type="button"
-          className="auth-button"
-          onClick={startGoogleLogin}
-          disabled={!isAuthConfigured || isAuthenticating}
-        >
-          {isAuthenticating ? '로그인 처리 중' : 'Google 로그인'}
-        </button>
+        <GoogleLoginButton clientId={GOOGLE_CLIENT_ID} onCredential={handleGoogleCredential} onError={setAuthError} />
       )}
     </div>
   )

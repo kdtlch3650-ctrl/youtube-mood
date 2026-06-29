@@ -405,6 +405,12 @@
   gap: 10px;
 }
 
+.google-login-slot {
+  align-items: center;
+  display: inline-flex;
+  min-height: 40px;
+}
+
 .environment-badge {
   align-items: center;
   border: 1px solid transparent;

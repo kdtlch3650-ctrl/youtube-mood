@@ -5,9 +5,7 @@ metadata:
   namespace: youtube-mood
 data:
   AWS_REGION: "ap-northeast-2"
-  COGNITO_REGION: "ap-northeast-2"
-  COGNITO_USER_POOL_ID: ""
-  COGNITO_APP_CLIENT_ID: ""
+  GOOGLE_CLIENT_ID: "1009656259049-q94esh85j20a961f7nviookgph8fhsgg.apps.googleusercontent.com"
   OPENSEARCH_ENDPOINT: "https://vpc-youtube-mood-nza2no2fobrplq2gbfvxe27xmy.ap-northeast-2.es.amazonaws.com"
   OPENSEARCH_INDEX: "youtube-mood-search-records"
   OPENSEARCH_REGION: "ap-northeast-2"
