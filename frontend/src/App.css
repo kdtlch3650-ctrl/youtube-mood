@@ -391,6 +391,10 @@
   gap: 16px;
 }
 
+.auth-gate-toolbar {
+  margin-bottom: 6px;
+}
+
 .toolbar-actions {
   align-items: center;
   display: flex;
@@ -1334,6 +1338,22 @@
   gap: 10px;
   grid-template-columns: minmax(0, 1fr) auto;
   min-width: 340px;
+}
+
+.history-search-form button {
+  background: var(--accent);
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  padding: 13px 18px;
+}
+
+.history-search-form button:disabled {
+  background: #4d5263;
+  cursor: not-allowed;
 }
 
 .history-search-form input {

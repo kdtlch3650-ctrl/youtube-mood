@@ -1472,12 +1472,17 @@ function App() {
     return (
       <main className="app-shell auth-gate-shell">
         <section className="auth-gate-card" aria-labelledby="auth-gate-title">
-          <p className="auth-gate-badge">Login required</p>
+          <div className="screen-toolbar auth-gate-toolbar">
+            <p className="auth-gate-badge">Login required</p>
+            <div className="toolbar-actions">
+              {renderAuthControls()}
+              {renderEnvironmentBadge()}
+            </div>
+          </div>
           <h1 id="auth-gate-title">먼저 로그인한 뒤 음악 추천을 시작하세요</h1>
           <p className="auth-gate-copy">
             이 서비스는 로그인 후 검색 기록 저장과 추천 결과 활용을 지원합니다.
           </p>
-          {renderAuthControls()}
           {authError && <p className="auth-error">{authError}</p>}
         </section>
       </main>
@@ -1506,6 +1511,7 @@ function App() {
                     onChange={(event) => setHistorySearchText(event.target.value)}
                     placeholder="기록 검색"
                   />
+                  <button type="submit">검색</button>
                   {renderSearchScopeSwitch()}
                 </form>
                 {renderAuthControls()}
