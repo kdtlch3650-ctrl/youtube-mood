@@ -1329,15 +1329,17 @@
 }
 
 .history-toolbar {
-  align-items: start;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .history-search-form {
   align-items: center;
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  min-width: 340px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  width: min(100%, 760px);
 }
 
 .history-search-form button {
@@ -1364,6 +1366,12 @@
   font: inherit;
   min-width: 0;
   padding: 13px 18px;
+  width: 100%;
+}
+
+.history-toolbar .toolbar-actions {
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
 }
 
