@@ -1336,10 +1336,10 @@
 
 .history-search-form {
   align-items: center;
-  display: grid;
+  display: flex;
+  flex-wrap: nowrap;
   gap: 10px;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  width: min(100%, 760px);
+  width: min(100%, 820px);
 }
 
 .history-search-form button {
@@ -1351,6 +1351,7 @@
   font: inherit;
   font-weight: 900;
   padding: 13px 18px;
+  white-space: nowrap;
 }
 
 .history-search-form button:disabled {
@@ -1364,15 +1365,21 @@
   border-radius: 999px;
   color: var(--text);
   font: inherit;
+  flex: 1 1 auto;
   min-width: 0;
   padding: 13px 18px;
-  width: 100%;
 }
 
 .history-toolbar .toolbar-actions {
   align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
   width: 100%;
+}
+
+.history-toolbar .toolbar-actions > .auth-actions {
+  align-self: flex-end;
 }
 
 .history-search-form input::placeholder {
