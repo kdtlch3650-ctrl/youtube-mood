@@ -340,7 +340,7 @@ function App() {
 
     const loadSearchRecords = async () => {
       try {
-        const response = await fetch(apiUrl('/api/search-records'), {
+        const response = await fetch(apiUrl('/search-records'), {
           headers: {
             ...buildRequestHeaders(),
           },
@@ -396,7 +396,7 @@ function App() {
     const loadPlaylistTracks = async () => {
       try {
         const response = await fetch(
-          apiUrl(`/api/playlists/${encodeURIComponent(activePlaylist.id)}/tracks?${query.toString()}`),
+          apiUrl(`/playlists/${encodeURIComponent(activePlaylist.id)}/tracks?${query.toString()}`),
           {
             headers: {
               ...buildRequestHeaders(),
@@ -529,7 +529,7 @@ function App() {
     setErrorMessage('')
 
     try {
-      const response = await fetch(apiUrl('/api/analyze'), {
+      const response = await fetch(apiUrl('/analyze'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
