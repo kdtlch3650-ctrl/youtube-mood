@@ -1,6 +1,7 @@
 import path from 'node:path'
 
 export default {
+  base: process.env.VITE_BASE_PATH ?? '/',
   cacheDir: path.join(process.env.TEMP ?? 'C:/Temp', 'vite-cache', 'youtube-mood-frontend'),
   server: {
     host: '127.0.0.1',

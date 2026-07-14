@@ -56,6 +56,10 @@ type KeywordTooltipState = {
   left: number
   value: string
 } | null
+type DemoTooltipState = {
+  top: number
+  left: number
+} | null
 
 type AuthSession = {
   accessToken: string
@@ -158,6 +162,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:800
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 const GOOGLE_LOGIN_SCRIPT_URL = 'https://accounts.google.com/gsi/client'
 const APP_ENV = (import.meta.env.VITE_APP_ENV ?? 'local').trim().toLowerCase()
+const IS_DEMO_MODE = (import.meta.env.VITE_DEMO_MODE ?? '').toString().trim().toLowerCase() === 'true'
 const ENVIRONMENT_LABEL = APP_ENV === 'prod' || APP_ENV === 'production' ? 'PROD' : 'LOCAL'
 const APP_SESSION_STORAGE_KEY = 'youtube-mood-session-id'
 const AUTH_SESSION_STORAGE_KEY = 'youtube-mood-auth-session'
@@ -166,6 +171,103 @@ const YOUTUBE_IFRAME_API_URL = 'https://www.youtube.com/iframe_api'
 const YOUTUBE_PLAYER_ELEMENT_ID = 'youtube-player-anchor'
 
 const apiUrl = (path: string) => `${API_BASE_URL}${path}`
+
+const demoImageUrls = [
+  'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=500&q=80',
+  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=500&q=80',
+  'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=80',
+  'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=500&q=80',
+]
+
+const demoPlaylistTracks: PlaylistTrackItem[] = [
+  {
+    title: 'Demo track 01 - Light start',
+    thumbnail_url: demoImageUrls[0],
+    url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk',
+    video_id: 'jfKfPfyJRdk',
+  },
+  {
+    title: 'Demo track 02 - Warm rhythm',
+    thumbnail_url: demoImageUrls[1],
+    url: 'https://www.youtube.com/watch?v=5qap5aO4i9A',
+    video_id: '5qap5aO4i9A',
+  },
+  {
+    title: 'Demo track 03 - Soft focus',
+    thumbnail_url: demoImageUrls[2],
+    url: 'https://www.youtube.com/watch?v=DWcJFNfaw9c',
+    video_id: 'DWcJFNfaw9c',
+  },
+  {
+    title: 'Demo track 04 - Calm night',
+    thumbnail_url: demoImageUrls[3],
+    url: 'https://www.youtube.com/watch?v=rUxyKA_-grg',
+    video_id: 'rUxyKA_-grg',
+  },
+]
+
+const buildMockAnalyzeResult = (text: string, searchScope: SearchScope): AnalyzeResult => {
+  const input = text.trim() || '오늘은 지쳤지만 너무 무거운 음악은 듣고 싶지 않아'
+  const wantsEnergy = /신나|댄스|빠른|활기|지루/.test(input)
+  const genre = /댄스|dance/i.test(input) ? 'dance' : null
+  const moodTags = wantsEnergy ? ['uplifting', 'light', 'soft', 'warm'] : ['soft', 'quiet', 'warm', 'light']
+  const searchKeywords = genre
+    ? ['uplifting dance music', 'light dance playlist', 'not boring music']
+    : ['soft comfort music', 'warm mood playlist', 'calm recommendation']
+  const recommendedTracks: RecommendationItem[] = Array.from({ length: 8 }, (_, index) => ({
+    id: `demo-track-${index + 1}`,
+    title: `${wantsEnergy ? 'Energetic demo' : 'Comfort demo'} track ${index + 1}`,
+    channel_title: 'Moodify Demo',
+    url: demoPlaylistTracks[index % demoPlaylistTracks.length].url,
+    thumbnail_url: demoImageUrls[index % demoImageUrls.length],
+    reason: '백엔드가 연결되지 않은 데모 환경에서 표시되는 목업 추천입니다.',
+  }))
+  const recommendedPlaylists: RecommendationItem[] = Array.from({ length: 6 }, (_, index) => ({
+    id: `demo-playlist-${index + 1}`,
+    title: `${wantsEnergy ? 'Light energy' : 'Soft mood'} playlist ${index + 1}`,
+    channel_title: 'Moodify Demo Playlist',
+    url: demoPlaylistTracks[index % demoPlaylistTracks.length].url,
+    thumbnail_url: demoImageUrls[(index + 1) % demoImageUrls.length],
+    playlist_tracks: demoPlaylistTracks,
+  }))
+
+  return {
+    input_text: input,
+    emotion_text: input,
+    request_text: wantsEnergy ? '지루하지 않은 음악과 댄스 분위기' : '무겁지 않고 편안한 음악',
+    emotions: wantsEnergy ? ['tiredness', 'positive'] : ['tiredness', 'comfort'],
+    mood_tags: moodTags,
+    genre,
+    search_keywords: searchScope === 'korean'
+      ? searchKeywords.map((keyword) => `한국어 중심 ${keyword}`)
+      : searchKeywords,
+    request_keywords: wantsEnergy ? ['dance', 'energetic', 'not boring'] : ['soft', 'comfort'],
+    blocked_mood_tags: ['heavy', 'late night'],
+    has_avoidance: true,
+    has_negation: /싫|않|말고|not|no/i.test(input),
+    recommended_tracks: recommendedTracks,
+    recommended_playlists: recommendedPlaylists,
+  }
+}
+
+const buildMockSearchRecord = (result: AnalyzeResult, searchScope: SearchScope): SearchRecord => ({
+  id: `demo-record-${Date.now()}`,
+  created_at: new Date().toISOString(),
+  input_text: result.input_text,
+  emotion_text: result.emotion_text,
+  request_text: result.request_text,
+  search_scope: searchScope,
+  emotions: result.emotions,
+  mood_tags: result.mood_tags,
+  genre: result.genre,
+  search_keywords: result.search_keywords,
+  request_keywords: result.request_keywords,
+  blocked_mood_tags: result.blocked_mood_tags,
+  has_avoidance: result.has_avoidance,
+  has_negation: result.has_negation,
+  recommended_tracks: result.recommended_tracks,
+  recommended_playlists: result.recommended_playlists,
+})
 
 const getYoutubeVideoId = (url: string) => {
   try {
@@ -339,12 +441,15 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [keywordTooltip, setKeywordTooltip] = useState<KeywordTooltipState>(null)
+  const [demoTooltip, setDemoTooltip] = useState<DemoTooltipState>(null)
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false)
+  const [isDemoModeActive, setIsDemoModeActive] = useState(IS_DEMO_MODE)
   const [appSessionId] = useState(() => getOrCreateAppSessionId())
   const [authSessionState, setAuthSessionState] = useState<AuthSession | null>(null)
   const [authError, setAuthError] = useState('')
   const analysisModalOpenTimerRef = useRef<number | null>(null)
   const authSession = authSessionState
+  const canUseApp = Boolean(authSession) || isDemoModeActive
   const isResultView = Boolean(analysisResult)
   const isHistoryView = screenMode === 'history'
   const recommendedTracks = analysisResult?.recommended_tracks ?? []
@@ -498,6 +603,10 @@ function App() {
   }
 
   const refreshSearchRecords = async (signal?: AbortSignal, forceSelectLatest = false) => {
+    if (isDemoModeActive) {
+      return
+    }
+
     const response = await fetch(apiUrl('/search-records'), {
       headers: {
         ...buildRequestHeaders(),
@@ -588,7 +697,7 @@ function App() {
 
   useEffect(() => {
     if (
-      !authSession ||
+      (!authSession && !isDemoModeActive) ||
       !activePlaylist ||
       activePlaylist.playlist_tracks?.length ||
       playlistTracksById[activePlaylist.id]
@@ -632,7 +741,7 @@ function App() {
     return () => {
       abortController.abort()
     }
-  }, [activePlaylist, authSession, appSessionId, playlistTracksById])
+  }, [activePlaylist, authSession, appSessionId, isDemoModeActive, playlistTracksById])
 
   useEffect(() => {
     if (window.YT?.Player) {
@@ -735,6 +844,25 @@ function App() {
     setErrorMessage('')
 
     try {
+      if (IS_DEMO_MODE) {
+        const result = buildMockAnalyzeResult(trimmedText, searchScope)
+        const record = buildMockSearchRecord(result, searchScope)
+        setIsDemoModeActive(true)
+        setAnalysisResult(result)
+        setSearchRecords((records) => [record, ...records])
+        setSelectedRecordId(record.id)
+        setPlaylistTracksById({})
+        setSelectedTrackId(result.recommended_tracks[0]?.id ?? null)
+        setSelectedPlaylistId(result.recommended_playlists[0]?.id ?? null)
+        setCurrentPlaylistTrackIndex(0)
+        loadedVideoIdRef.current = null
+        setIsPlayerActive(false)
+        setCurrentTime(0)
+        setDuration(0)
+        setInputText('')
+        return
+      }
+
       const response = await fetch(apiUrl('/analyze'), {
         method: 'POST',
         headers: {
@@ -773,11 +901,22 @@ function App() {
       setInputText('')
       void refreshSearchRecords(undefined, true)
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : '분석 결과를 불러오지 못했습니다. 백엔드 서버를 확인해 주세요.',
-      )
+      const result = buildMockAnalyzeResult(trimmedText, searchScope)
+      const record = buildMockSearchRecord(result, searchScope)
+      setIsDemoModeActive(true)
+      setAnalysisResult(result)
+      setSearchRecords((records) => [record, ...records])
+      setSelectedRecordId(record.id)
+      setPlaylistTracksById({})
+      setSelectedTrackId(result.recommended_tracks[0]?.id ?? null)
+      setSelectedPlaylistId(result.recommended_playlists[0]?.id ?? null)
+      setCurrentPlaylistTrackIndex(0)
+      loadedVideoIdRef.current = null
+      setIsPlayerActive(false)
+      setCurrentTime(0)
+      setDuration(0)
+      setInputText('')
+      console.warn(error)
     } finally {
       setIsLoading(false)
     }
@@ -822,6 +961,18 @@ function App() {
 
   const closeKeywordTooltip = () => {
     setKeywordTooltip(null)
+  }
+
+  const openDemoTooltip = (event: MouseEvent<HTMLSpanElement>) => {
+    setDemoTooltip(getKeywordTooltipPosition(event.clientX, event.clientY))
+  }
+
+  const moveDemoTooltip = (event: MouseEvent<HTMLSpanElement>) => {
+    setDemoTooltip((current) => (current ? getKeywordTooltipPosition(event.clientX, event.clientY) : current))
+  }
+
+  const closeDemoTooltip = () => {
+    setDemoTooltip(null)
   }
 
   const scheduleAnalysisModalOpen = () => {
@@ -912,9 +1063,27 @@ function App() {
 
   const renderEnvironmentBadge = () => (
     <div className="auth-actions">
-      <span className={`environment-badge ${ENVIRONMENT_LABEL === 'PROD' ? 'prod' : 'local'}`}>
-        {ENVIRONMENT_LABEL}
+      <span
+        className={`environment-badge ${
+          isDemoModeActive ? 'demo' : ENVIRONMENT_LABEL === 'PROD' ? 'prod' : 'local'
+        }`}
+        onMouseEnter={isDemoModeActive ? openDemoTooltip : undefined}
+        onMouseMove={isDemoModeActive ? moveDemoTooltip : undefined}
+        onMouseLeave={isDemoModeActive ? closeDemoTooltip : undefined}
+      >
+        {isDemoModeActive ? 'DEMO' : ENVIRONMENT_LABEL}
       </span>
+      {demoTooltip && (
+        <span
+          className="demo-floating-tooltip"
+          style={{
+            left: demoTooltip.left,
+            top: demoTooltip.top,
+          }}
+        >
+          백엔드와 AWS 인프라 연결 없이 목업 데이터로 추천 흐름을 확인하는 데모 버전입니다.
+        </span>
+      )}
     </div>
   )
 
@@ -929,6 +1098,10 @@ function App() {
             로그아웃
           </button>
         </>
+      ) : isDemoModeActive ? (
+        <span className="auth-chip" title="데모 모드에서는 로그인 없이 화면 흐름을 확인합니다.">
+          Demo session
+        </span>
       ) : (
         <GoogleLoginButton clientId={GOOGLE_CLIENT_ID} onCredential={handleGoogleCredential} onError={setAuthError} />
       )}
@@ -1468,7 +1641,7 @@ function App() {
     setIsPlayerActive(true)
   }
 
-  if (!authSession) {
+  if (!canUseApp) {
     return (
       <main className="app-shell auth-gate-shell">
         <section className="auth-gate-card" aria-labelledby="auth-gate-title">

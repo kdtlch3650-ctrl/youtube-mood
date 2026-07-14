@@ -441,6 +441,29 @@
   color: #dfe4ff;
 }
 
+.environment-badge.demo {
+  background: rgba(255, 193, 86, 0.16);
+  border-color: rgba(255, 193, 86, 0.42);
+  color: #ffd68a;
+  cursor: help;
+}
+
+.demo-floating-tooltip {
+  background: rgba(10, 12, 18, 0.96);
+  border: 1px solid rgba(255, 214, 138, 0.34);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+  max-width: 300px;
+  padding: 12px 14px;
+  pointer-events: none;
+  position: fixed;
+  z-index: 70;
+}
+
 .auth-button {
   background: linear-gradient(135deg, #5765ff, #4d5bff);
   border: 0;
